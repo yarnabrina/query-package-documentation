@@ -136,7 +136,7 @@ class Document(pydantic.BaseModel):
         return f"<Human>: ```{self.question}``` <AI>: ```{self.answer}```"
 
     @property
-    def tuning_prompt(self: "Document") -> str:
+    def llama2_tuning_prompt(self: "Document") -> str:
         context = (
             "Below is an instruction that describes a task. "
             "Write a response that appropriately completes the request."
@@ -144,12 +144,17 @@ class Document(pydantic.BaseModel):
 
         return f"{context} ### Instruction {self.question} ### Response {self.answer}"
 
+    @property
+    def mistral_tuning_prompt(self: "Document") -> str:
+        return f"<s>[INST] {self.question} [/INST] {self.answer} </s>"
+
 
 class JSONDocument(pydantic.BaseModel):
     question: str
     answer: str
     retrieval_context: str
-    tuning_prompt: str
+    llama2_tuning_prompt: str
+    mistral_tuning_prompt: str
 
 
 class JSONDataset(pydantic.BaseModel):

@@ -62,7 +62,8 @@ def generate_json_dataset(raw_dataset: list[Document]) -> JSONDataset:
                 "question": document.question,
                 "answer": document.answer,
                 "retrieval_context": document.retrieval_context,
-                "tuning_prompt": document.tuning_prompt,
+                "llama2_tuning_prompt": document.llama2_tuning_prompt,
+                "mistral_tuning_prompt": document.mistral_tuning_prompt,
             }
         )
         for document in raw_dataset
