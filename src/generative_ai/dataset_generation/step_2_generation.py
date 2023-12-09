@@ -25,9 +25,7 @@ def generate_dataset(questions: list[str], answers: list[str]) -> list[Document]
 
 
 @pydantic.validate_call(validate_return=True)
-def generate_package_dataset(
-    package_contents: Package,
-) -> list[Document]:
+def generate_package_dataset(package_contents: Package) -> list[Document]:
     package_name = package_contents.package_name
     package_full_name = package_contents.package_qualified_name
 
@@ -132,9 +130,7 @@ def generate_package_dataset(
 
 
 @pydantic.validate_call(validate_return=True)
-def generate_module_dataset(
-    module_members: Module,
-) -> list[Document]:
+def generate_module_dataset(module_members: Module) -> list[Document]:
     module_name = module_members.module_name
     module_full_name = module_members.module_qualified_name
 
