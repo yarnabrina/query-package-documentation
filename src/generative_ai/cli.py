@@ -69,7 +69,8 @@ def answer_query(
     query: str,
     embedding_model: str = "sentence-transformers/all-mpnet-base-v2",
     database_directory: pathlib.Path = pathlib.Path("embeddings_database"),
-    language_model: str = "google/flan-t5-large",
+    language_model_type: str = "huggingface_standard",
+    language_model_name: str = "google/flan-t5-large",
 ) -> None:
     if not database_directory.exists():
         typer.echo("Database directory is missing, skipping. Use 'generate-database' first.")
@@ -78,7 +79,9 @@ def answer_query(
     from information_retrieval import load_embedding_database, prepare_question_answer_chain
 
     embedding_database = load_embedding_database(embedding_model, database_directory)
-    question_answer_chain = prepare_question_answer_chain(embedding_database, language_model)
+    question_answer_chain = prepare_question_answer_chain(
+        embedding_database, language_model_type, language_model_name
+    )
 
     answer = question_answer_chain.invoke(query)
     typer.echo(f"Answer: {answer['result']}.")

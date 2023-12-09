@@ -1,4 +1,5 @@
 chromadb
+ctransformers
 jq
 langchain
 sentence-transformers

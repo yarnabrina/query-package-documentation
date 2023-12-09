@@ -10,7 +10,8 @@ from .step_1_retrieval import (
     load_json_documents,
     partition_documents,
 )
-from .step_2_retrieval import create_database_retriever, create_llm, generate_chain
+from .step_2_retrieval import create_database_retriever, create_llm, generate_retrieval_chain
+from .utils_retrieval import LanguageModelType
 
 
 def load_source_documents(file_path: pathlib.Path) -> list[Document]:
@@ -44,12 +45,12 @@ def load_embedding_database(embedding_model: str, directory_path: pathlib.Path) 
 
 
 def prepare_question_answer_chain(
-    embedding_database: Chroma, language_model: str
+    embedding_database: Chroma, language_model_type: LanguageModelType, language_model_name: str
 ) -> RunnableSerializable:
     database_retriever = create_database_retriever(embedding_database)
-    llm = create_llm(language_model)
+    llm = create_llm(language_model_type, language_model_name)
 
-    question_answer_chain = generate_chain(database_retriever, llm)
+    question_answer_chain = generate_retrieval_chain(database_retriever, llm, language_model_type)
 
     return question_answer_chain
 
