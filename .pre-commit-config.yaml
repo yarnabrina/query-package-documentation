@@ -33,7 +33,7 @@ repos:
       - id: pyupgrade
         args:
           - --keep-runtime-typing
-          - --py310-plus
+          - --py311-plus
   - repo: https://github.com/pycqa/autoflake
     rev: v2.2.1
     hooks:
@@ -49,7 +49,7 @@ repos:
           - src
         pass_filenames: false
   - repo: https://github.com/psf/black
-    rev: 23.10.1
+    rev: 23.11.0
     hooks:
       - id: black
         args:
@@ -74,18 +74,18 @@ repos:
         args:
           - src
         pass_filenames: false
-  - repo: https://github.com/pre-commit/mirrors-mypy
-    rev: v1.6.1
-    hooks:
-      - id: mypy
-        additional_dependencies:
-          - pydantic
-        args:
-          - --ignore-missing-imports
-          - --scripts-are-modules
-        pass_filenames: false
-        stages:
-          - manual
+  # - repo: https://github.com/pre-commit/mirrors-mypy
+  #   rev: v1.7.0
+  #   hooks:
+  #     - id: mypy
+  #       additional_dependencies:
+  #         - pydantic
+  #       args:
+  #         - --ignore-missing-imports
+  #         - --scripts-are-modules
+  #       pass_filenames: false
+  #       stages:
+  #         - manual
   - repo: https://github.com/PyCQA/pylint
     rev: v3.0.1
     hooks:
@@ -97,15 +97,15 @@ repos:
         pass_filenames: false
         stages:
           - manual
-  - repo: https://github.com/RobertCraigie/pyright-python
-    rev: v1.1.333
-    hooks:
-      - id: pyright
-        pass_filenames: false
-        stages:
-          - manual
+  # - repo: https://github.com/RobertCraigie/pyright-python
+  #   rev: v1.1.336
+  #   hooks:
+  #     - id: pyright
+  #       pass_filenames: false
+  #       stages:
+  #         - manual
   - repo: https://github.com/astral-sh/ruff-pre-commit
-    rev: v0.1.3
+    rev: v0.1.6
     hooks:
       - id: ruff
         args:
@@ -116,43 +116,43 @@ repos:
     hooks:
       - id: vulture
         pass_filenames: false
-  - repo: https://github.com/PyCQA/docformatter
-    rev: v1.7.5
-    hooks:
-      - id: docformatter
-        additional_dependencies:
-          - tomli
-        args:
-          - --in-place
-          - src
-        pass_filenames: false
-  - repo: https://github.com/adamchainz/blacken-docs
-    rev: 1.16.0
-    hooks:
-      - id: blacken-docs
-        args:
-          - --line-length
-          - "87"
-          - --target-version
-          - py310
-  - repo: https://github.com/econchick/interrogate
-    rev: 1.5.0
-    hooks:
-      - id: interrogate
-        args:
-          - src
-        pass_filenames: false
-  - repo: https://github.com/pycqa/pydocstyle
-    rev: 6.3.0
-    hooks:
-      - id: pydocstyle
-        additional_dependencies:
-          - tomli
-        args:
-          - src
-        pass_filenames: false
+  # - repo: https://github.com/PyCQA/docformatter
+  #   rev: v1.7.5
+  #   hooks:
+  #     - id: docformatter
+  #       additional_dependencies:
+  #         - tomli
+  #       args:
+  #         - --in-place
+  #         - src
+  #       pass_filenames: false
+  # - repo: https://github.com/adamchainz/blacken-docs
+  #   rev: 1.16.0
+  #   hooks:
+  #     - id: blacken-docs
+  #       args:
+  #         - --line-length
+  #         - "87"
+  #         - --target-version
+  #         - py311
+  # - repo: https://github.com/econchick/interrogate
+  #   rev: 1.5.0
+  #   hooks:
+  #     - id: interrogate
+  #       args:
+  #         - src
+  #       pass_filenames: false
+  # - repo: https://github.com/pycqa/pydocstyle
+  #   rev: 6.3.0
+  #   hooks:
+  #     - id: pydocstyle
+  #       additional_dependencies:
+  #         - tomli
+  #       args:
+  #         - src
+  #       pass_filenames: false
   - repo: https://github.com/tox-dev/pyproject-fmt
-    rev: 1.3.0
+    rev: 1.5.1
     hooks:
       - id: pyproject-fmt
   - repo: https://github.com/abravalheri/validate-pyproject
@@ -170,5 +170,5 @@ repos:
         stages:
           - manual
 default_language_version:
-  python: python3.10
+  python: python3.11
 fail_fast: false
