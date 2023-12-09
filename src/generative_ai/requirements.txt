@@ -1,1 +1,3 @@
+--requirement ./dataset_generation/requirements.txt
+--requirement ./information_retrieval/requirements.txt
 typer

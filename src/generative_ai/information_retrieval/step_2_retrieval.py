@@ -11,7 +11,7 @@ from .utils_retrieval import LLAMA2_MODEL, MISTRAL_MODEL, ZEPHYR_MODEL, Language
 
 
 def create_database_retriever(embedding_database: Chroma) -> VectorStoreRetriever:
-    retriever = embedding_database.as_retriever(search_kwargs={"k": 10})
+    retriever = embedding_database.as_retriever(search_kwargs={"k": 2})
 
     return retriever
 
@@ -19,6 +19,14 @@ def create_database_retriever(embedding_database: Chroma) -> VectorStoreRetrieve
 def create_llm(
     language_model_type: LanguageModelType, language_model_name: str
 ) -> CTransformers | HuggingFacePipeline:
+    common_parameters = {"max_new_tokens": 256}
+
+    match language_model_type:
+        case LanguageModelType.HUGGINGFACE_STANDARD:
+            common_parameters.update({"do_sample": True, "top_k": 1})
+        case _:
+            common_parameters.update({"temperature": 0})
+
     match language_model_type:
         case LanguageModelType.HUGGINGFACE_STANDARD:
             tokeniser = transformers.AutoTokenizer.from_pretrained(
@@ -27,7 +35,7 @@ def create_llm(
             tokeniser.pad_token = tokeniser.eos_token
 
             pipeline = transformers.pipeline(
-                model=language_model_name, tokenizer=tokeniser, max_new_tokens=300
+                model=language_model_name, tokenizer=tokeniser, **common_parameters
             )
             llm = HuggingFacePipeline(pipeline=pipeline)
         case LanguageModelType.LLAMA2_7B_GGUF:
@@ -35,18 +43,21 @@ def create_llm(
                 model=LLAMA2_MODEL.model,
                 model_type=LLAMA2_MODEL.model_type,
                 model_file=LLAMA2_MODEL.model_file,
+                config=common_parameters,
             )
         case LanguageModelType.MISTRAL_7B_GGUF:
             llm = CTransformers(
                 model=MISTRAL_MODEL.model,
                 model_type=MISTRAL_MODEL.model_type,
                 model_file=MISTRAL_MODEL.model_file,
+                config=common_parameters,
             )
         case LanguageModelType.ZEPHYR_7B_GGUF:
             llm = CTransformers(
                 model=ZEPHYR_MODEL.model,
                 model_type=ZEPHYR_MODEL.model_type,
                 model_file=ZEPHYR_MODEL.model_file,
+                config=common_parameters,
             )
         case _:
             raise ValueError("Unexpected language model type")
@@ -55,55 +66,21 @@ def create_llm(
 
 
 def generate_retrieval_chain(
-    database_retriever: VectorStoreRetriever,
-    llm: CTransformers | HuggingFacePipeline,
-    language_model_type: LanguageModelType,
+    database_retriever: VectorStoreRetriever, llm: CTransformers | HuggingFacePipeline
 ) -> BaseRetrievalQA:
-    match language_model_type:
-        case LanguageModelType.HUGGINGFACE_STANDARD | LanguageModelType.LLAMA2_7B_GGUF:
-            prompt_template = """You are a chat assistant for question-answering tasks.
+    prompt_template = """You are a chat assistant to help new users for a Python package.
 
-You help human developers with documentation on a new python package they are unfamiliar with.
+1. You will be provided with a specific question and a context relevant to answer that question.
+2. Your response should be based solely on the given context.
+3. Keep your answer concise, not exceeding five sentences.
+4. If the answer is not found within the context, respond with "I do not know".
+5. Do not fabricate any information.
 
-Your goal is to answer the following question, delimited by triple single quotes.
+Context: {context}
+Question: {question}
 
-Question: '''{question}'''
-
-Only use the following context delimited by triple single quotes to answer the above question."
-
-Context: '''{context}'''
-
-Keep the answer as concise as possible, and do not use more than five sentences.
-
-If you do not know the answer, just reply 'Sorry, I do not know.'.
-
-Do not make up any information.
-
-Answer: """
-        case LanguageModelType.MISTRAL_7B_GGUF | LanguageModelType.ZEPHYR_7B_GGUF:
-            prompt_template = """[INST]
-
-<<SYS>> You are a chat assistant for question-answering tasks.
-
-You help human developers with documentation on a new python package they are unfamiliar with.
-
-You may use the retrieved context to answer the question, both delimited by triple single quotes.
-
-Keep the answer as concise as possible, and do not use more than five sentences.
-
-If you do not know the answer, just reply 'Sorry, I do not know.'.
-
-Do not use any information that is not available in the context.
-
-Do not make up any information. <</SYS>>
-
-Question: '''{question}'''
-
-Context: '''{context}'''
-
-Answer: [/INST]"""
-        case _:
-            raise ValueError("Unexpected language model type")
+Answer:
+    """
 
     prompt = PromptTemplate.from_template(prompt_template)
 

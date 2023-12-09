@@ -50,7 +50,7 @@ def prepare_question_answer_chain(
     database_retriever = create_database_retriever(embedding_database)
     llm = create_llm(language_model_type, language_model_name)
 
-    question_answer_chain = generate_retrieval_chain(database_retriever, llm, language_model_type)
+    question_answer_chain = generate_retrieval_chain(database_retriever, llm)
 
     return question_answer_chain
 

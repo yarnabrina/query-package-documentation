@@ -1,4 +1,5 @@
 import inspect
+import random
 
 import pydantic
 
@@ -13,11 +14,14 @@ from .utils_generation import (
     Package,
 )
 
+random.seed(a=0)
+
 
 @pydantic.validate_call(validate_return=True)
 def generate_dataset(question_answer_pairs: list[tuple[str, str]]) -> list[Document]:
     dataset = [
-        Document(question=question, answer=answer) for question, answer in question_answer_pairs
+        Document(question=question, answer=answer)
+        for question, answer in random.sample(question_answer_pairs, 3)
     ]
 
     return dataset

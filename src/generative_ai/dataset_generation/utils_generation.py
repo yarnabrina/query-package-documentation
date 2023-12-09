@@ -133,7 +133,7 @@ class Document(pydantic.BaseModel):
 
     @property
     def retrieval_context(self: "Document") -> str:
-        return f"<Human>: ```{self.question}``` <AI>: ```{self.answer}```"
+        return f"<Human>: {self.question} <AI>: {self.answer}"
 
     @property
     def llama2_tuning_prompt(self: "Document") -> str:
