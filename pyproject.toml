@@ -1,0 +1,205 @@
+[tool.black]
+line-length = 99
+target-version = [
+  "py310",
+]
+safe = true
+
+[tool.ruff]
+fix = true
+ignore = [
+  "COM",
+  "D203",
+  "D213",
+  "DTZ",
+  "EM",
+  "FBT",
+  "FIX",
+  "G",
+  "ICN",
+  "PD",
+  "RET501",
+  "RET502",
+  "RET503",
+  "RET504",
+  "SLF",
+  "TRY003",
+]
+ignore-init-module-imports = true
+line-length = 99
+output-format = "grouped"
+select = [
+  "ALL",
+]
+src = [
+  "src",
+]
+target-version = "py310"
+
+[tool.ruff.flake8-annotations]
+allow-star-arg-any = true
+ignore-fully-untyped = true
+
+[tool.ruff.flake8-bugbear]
+extend-immutable-calls = [
+  "fastapi.Depends",
+  "fastapi.Query",
+  "pydantic.Field",
+]
+
+[tool.ruff.flake8-type-checking]
+exempt-modules = [
+  "typing",
+  "typing_extensions",
+]
+runtime-evaluated-base-classes = [
+  "pydantic.BaseModel",
+]
+
+[tool.ruff.pep8-naming]
+classmethod-decorators = [
+  "pydantic.field_validator",
+]
+
+[tool.ruff.per-file-ignores]
+"**/__init__.py" = [
+  "F401",
+]
+"**/test_*.py" = [
+  "S101",
+]
+
+[tool.ruff.pycodestyle]
+max-doc-length = 99
+
+[tool.ruff.pydocstyle]
+convention = "numpy"
+ignore-decorators = [
+  "typing.overload",
+]
+
+[tool.ruff.pyupgrade]
+keep-runtime-typing = true
+
+[tool.isort]
+overwrite_in_place = true
+profile = "black"
+atomic = true
+float_to_top = true
+line_length = 99
+remove_redundant_aliases = true
+src_paths = [
+  "src",
+]
+py_version = 310
+
+[tool.pytest.ini_options]
+addopts = "--junit-xml=pytest_junit_report.xml --doctest-modules --doctest-ignore-import-errors --doctest-continue-on-failure"
+console_output_style = "count"
+
+[tool.coverage.run]
+branch = true
+command_line = "--module pytest"
+data_file = "coverage_data"
+include = [
+  "src/**/*.py",
+]
+omit = [
+  "**/tests/*.py",
+]
+
+[tool.coverage.report]
+fail_under = 85
+include = [
+  "src/**/*.py",
+]
+omit = [
+  "**/tests/*.py",
+]
+precision = 2
+exclude_lines = [
+  "pragma: no cover",
+  "if __name__ == .__main__.:",
+  "if typing.TYPE_CHECKING:",
+]
+
+[tool.coverage.html]
+directory = "coverage_html_report"
+
+[tool.coverage.xml]
+output = "coverage_xml_report.xml"
+
+[tool.mypy]
+files = [
+  "src",
+]
+exclude = [
+  "conftest",
+  "test_",
+]
+strict = true
+
+[tool.autoflake]
+in-place = true
+remove-all-unused-imports = true
+recursive = true
+expand-star-imports = true
+ignore-init-module-imports = true
+remove-duplicate-keys = true
+remove-unused-variables = true
+
+[tool.docformatter]
+in-place = true
+recursive = true
+wrap-summaries = 99
+wrap-descriptions = 99
+
+[tool.interrogate]
+fail-under = 85
+ignore-init-method = true
+
+[tool.pydocstyle]
+convention = "numpy"
+
+[tool.pylint.main]
+extension-pkg-allow-list = [
+  "pydantic",
+]
+fail-under = 8.5
+jobs = 0
+recursive = true
+
+[tool.pylint.basic]
+include-naming-hint = true
+
+[tool.pylint.format]
+max-line-length = 99
+
+[tool.pylint.logging]
+logging-format-style = "new"
+
+[tool.pylint."messages control"]
+enable = [
+  "all",
+]
+disable = [
+  "logging-fstring-interpolation",
+]
+
+[tool.pylint.reports]
+output-format = "colorized"
+
+[tool.pyright]
+include = [
+  "src",
+]
+exclude = [
+  "**/tests/*.py",
+]
+pythonVersion = "3.10"
+
+[tool.vulture]
+min_confidence = 100
+paths = [
+  "src",
+]
