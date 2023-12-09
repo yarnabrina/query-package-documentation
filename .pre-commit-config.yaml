@@ -75,7 +75,7 @@ repos:
           - src
         pass_filenames: false
   # - repo: https://github.com/pre-commit/mirrors-mypy
-  #   rev: v1.7.0
+  #   rev: v1.7.1
   #   hooks:
   #     - id: mypy
   #       additional_dependencies:
@@ -98,7 +98,7 @@ repos:
         stages:
           - manual
   # - repo: https://github.com/RobertCraigie/pyright-python
-  #   rev: v1.1.336
+  #   rev: v1.1.337
   #   hooks:
   #     - id: pyright
   #       pass_filenames: false
