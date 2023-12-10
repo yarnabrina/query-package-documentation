@@ -180,10 +180,7 @@ def get_all_returns_details(
         return Returns(returns_annotation=returns_signature)
 
     returns_docstring = next(
-        {
-            "returns_annotation": returns.type,
-            "returns_summary": " ".join(returns.desc),
-        }
+        {"returns_annotation": returns.type, "returns_summary": " ".join(returns.desc)}
         for returns in docstring["Returns"]
     )
 

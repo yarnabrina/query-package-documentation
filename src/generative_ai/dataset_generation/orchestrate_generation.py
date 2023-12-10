@@ -14,11 +14,11 @@ from .step_2_generation import (
     generate_module_dataset,
     generate_package_dataset,
 )
-from .utils_generation import Document, JSONDataset, JSONDocument, MemberDetails, Module
+from .utils_generation import Dataset, JSONDataset, JSONDocument, MemberDetails, Module
 
 
 @pydantic.validate_call(validate_return=True)
-def generate_raw_dataset(package_name: str) -> list[Document]:
+def generate_raw_datasets(package_name: str) -> list[Dataset]:
     all_package_contents = get_all_package_contents(package_name)
 
     all_module_members: list[Module] = []
@@ -45,31 +45,33 @@ def generate_raw_dataset(package_name: str) -> list[Document]:
 
             all_member_details.append(member_details)
 
-    package_dataset = map(generate_package_dataset, all_package_contents)
-    module_dataset = map(generate_module_dataset, all_module_members)
-    member_dataset = map(generate_member_dataset, all_member_details)
+    package_datasets = map(generate_package_dataset, all_package_contents)
+    module_datasets = map(generate_module_dataset, all_module_members)
+    member_datasets = map(generate_member_dataset, all_member_details)
 
-    combined_dataset = itertools.chain(*package_dataset, *module_dataset, *member_dataset)
+    combined_datasets = itertools.chain(package_datasets, module_datasets, *member_datasets)
 
-    return list(combined_dataset)
+    return list(combined_datasets)
 
 
 @pydantic.validate_call(validate_return=True)
-def generate_json_dataset(raw_dataset: list[Document]) -> JSONDataset:
-    json_dataset = [
-        JSONDocument.model_validate(
-            {
-                "question": document.question,
-                "answer": document.answer,
-                "retrieval_context": document.retrieval_context,
-                "llama2_tuning_prompt": document.llama2_tuning_prompt,
-                "mistral_tuning_prompt": document.mistral_tuning_prompt,
-            }
-        )
-        for document in raw_dataset
-    ]
+def generate_json_dataset(raw_datasets: list[Dataset]) -> JSONDataset:
+    retrieval_documents: list[str] = []
+    tuning_documents: list[JSONDocument] = []
 
-    return JSONDataset.model_validate({"documents": json_dataset})
+    for dataset in raw_datasets:
+        retrieval_documents.extend(dataset.retrieval_chunks)
+
+        tuning_documents.extend(
+            [
+                JSONDocument.model_validate(document.model_dump())
+                for document in dataset.tuning_documents
+            ]
+        )
+
+    return JSONDataset.model_validate(
+        {"retrieval_documents": retrieval_documents, "tuning_documents": tuning_documents}
+    )
 
 
 @pydantic.validate_call
@@ -88,7 +90,7 @@ def load_json_dataset(file_path: pathlib.Path) -> JSONDataset:
 
 __all__ = [
     "generate_json_dataset",
-    "generate_raw_dataset",
+    "generate_raw_datasets",
     "load_json_dataset",
     "store_json_dataset",
 ]

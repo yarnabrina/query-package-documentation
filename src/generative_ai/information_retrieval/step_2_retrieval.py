@@ -11,7 +11,9 @@ from .utils_retrieval import LLAMA2_MODEL, MISTRAL_MODEL, ZEPHYR_MODEL, Language
 
 
 def create_database_retriever(embedding_database: Chroma) -> VectorStoreRetriever:
-    retriever = embedding_database.as_retriever(search_kwargs={"k": 2})
+    retriever = embedding_database.as_retriever(
+        search_type="mmr", search_kwargs={"k": 3, "fetch_k": 5}
+    )
 
     return retriever
 
@@ -73,14 +75,13 @@ def generate_retrieval_chain(
 1. You will be provided with a specific question and a context relevant to answer that question.
 2. Your response should be based solely on the given context.
 3. Keep your answer concise, not exceeding five sentences.
-4. If the answer is not found within the context, respond with "I do not know".
+4. If the answer is not found within the context, respond with "I do not know.".
 5. Do not fabricate any information.
 
 Context: {context}
 Question: {question}
 
-Answer:
-    """
+Answer:"""
 
     prompt = PromptTemplate.from_template(prompt_template)
 

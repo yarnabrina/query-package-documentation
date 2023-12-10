@@ -21,10 +21,10 @@ def generate_dataset(
         dataset_file.unlink()
         typer.echo("Deleted existed dataset.")
 
-    from dataset_generation import generate_json_dataset, generate_raw_dataset, store_json_dataset
+    from dataset_generation import generate_json_dataset, generate_raw_datasets, store_json_dataset
 
-    raw_dataset = generate_raw_dataset(package_name)
-    json_dataset = generate_json_dataset(raw_dataset)
+    raw_datasets = generate_raw_datasets(package_name)
+    json_dataset = generate_json_dataset(raw_datasets)
 
     store_json_dataset(json_dataset, dataset_file)
     typer.echo("Dataset generation complete.")
@@ -33,7 +33,7 @@ def generate_dataset(
 @CLI_APPLICATION.command()
 def generate_database(
     dataset_file: pathlib.Path = pathlib.Path("json_documents.json"),
-    embedding_model: str = "sentence-transformers/all-mpnet-base-v2",
+    embedding_model: str = "sentence-transformers/all-MiniLM-L6-v2",
     database_directory: pathlib.Path = pathlib.Path("embeddings_database"),
     force: bool = False,
 ) -> None:
@@ -67,7 +67,7 @@ def generate_database(
 @CLI_APPLICATION.command()
 def answer_query(
     query: str,
-    embedding_model: str = "sentence-transformers/all-mpnet-base-v2",
+    embedding_model: str = "sentence-transformers/all-MiniLM-L6-v2",
     database_directory: pathlib.Path = pathlib.Path("embeddings_database"),
     language_model_type: str = "huggingface_standard",
     language_model_name: str = "google/flan-t5-large",
@@ -84,7 +84,12 @@ def answer_query(
     )
 
     answer = question_answer_chain.invoke(query)
-    typer.echo(f"Answer: {answer['result']}.")
+
+    typer.echo(f"Query: {answer['query']}")
+    typer.echo(f"Answer: {answer['result']}")
+
+    for counter, source in enumerate(answer["source_documents"]):
+        typer.echo(f"Source {counter + 1}: {source.page_content}")
 
 
 if __name__ == "__main__":

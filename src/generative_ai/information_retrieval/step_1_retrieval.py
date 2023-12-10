@@ -8,14 +8,14 @@ from langchain.vectorstores.chroma import Chroma
 
 
 def load_json_documents(file_path: pathlib.Path) -> list[Document]:
-    json_loader = JSONLoader(file_path, ".documents[].retrieval_context")
+    json_loader = JSONLoader(file_path, ".retrieval_documents[]")
     raw_documents = json_loader.load()
 
     return raw_documents
 
 
 def partition_documents(raw_documents: list[Document]) -> list[Document]:
-    text_splitter = RecursiveCharacterTextSplitter(chunk_size=500, chunk_overlap=0)
+    text_splitter = RecursiveCharacterTextSplitter(chunk_size=512, chunk_overlap=64)
     partitioned_documents = text_splitter.split_documents(raw_documents)
 
     return partitioned_documents
