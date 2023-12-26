@@ -1,0 +1,21 @@
+{
+    "Authors": [
+        "Anirban Ray"
+    ],
+    "Description": "A package to explore documentations",
+    "Keywords": [
+        "documentation",
+        "generative-ai"
+    ],
+    "License": "MIT",
+    "Links": {
+        "Bug Tracker": "https://github.com/yarnabrina/query-package-documentation/issues",
+        "Documentation": "https://query-package-documentation.readthedocs.io",
+        "Source Code": "https://github.com/yarnabrina/query-package-documentation"
+    },
+    "Maintainers": [
+        "Anirban Ray <39331844+yarnabrina@users.noreply.github.com>"
+    ],
+    "Name": "query-package-documentation",
+    "Version": "0.0.1"
+}

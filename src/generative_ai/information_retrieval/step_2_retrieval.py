@@ -5,12 +5,19 @@ from langchain.llms.ctransformers import CTransformers
 from langchain.llms.huggingface_pipeline import HuggingFacePipeline
 from langchain.prompts import PromptTemplate
 from langchain.schema.vectorstore import VectorStoreRetriever
-from langchain.vectorstores.chroma import Chroma
 
-from .utils_retrieval import LLAMA2_MODEL, MISTRAL_MODEL, ZEPHYR_MODEL, LanguageModelType
+from .utils_retrieval import (
+    LLAMA2_MODEL,
+    MISTRAL_MODEL,
+    ZEPHYR_MODEL,
+    LanguageModelType,
+    ValidatedChroma,
+)
 
 
-def create_database_retriever(embedding_database: Chroma) -> VectorStoreRetriever:
+def create_database_retriever(
+    embedding_database: ValidatedChroma,
+) -> VectorStoreRetriever:
     retriever = embedding_database.as_retriever(
         search_type="mmr", search_kwargs={"k": 3, "fetch_k": 5}
     )

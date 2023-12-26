@@ -1,4 +1,5 @@
 import inspect
+import logging
 import random
 
 import pydantic
@@ -16,6 +17,8 @@ from .utils_generation import (
 
 random.seed(a=0)
 
+LOGGER = logging.getLogger(__name__)
+
 
 @pydantic.validate_call(validate_return=True)
 def enumerate_array_elements(array: list, attribute: str | None = None) -> str:
@@ -26,6 +29,8 @@ def enumerate_array_elements(array: list, attribute: str | None = None) -> str:
         elif attribute is not None:
             elements.append(getattr(element, attribute))
         else:
+            LOGGER.error(f"Received {attribute=} along with {array=}")
+
             raise ValueError("attribute must be non-null if array elements are not string")
 
     return " ".join(f"{counter + 1}. {element}" for counter, element in enumerate(elements))
@@ -2759,6 +2764,8 @@ def generate_member_dataset(member_details: MemberDetails) -> tuple[Dataset, ...
                 f"'{member_name}' function", member_docstring, member_type_details
             )
         case _:
+            LOGGER.critical(f"Received unsupported {member_type=}")
+
             raise ValueError("Unexpected member type: supports 'enum', 'class', 'function'")
 
     member_dataset = Dataset(

@@ -1,3 +1,0 @@
---constraint ./dataset_generation/constraints.txt
---constraint ./information_retrieval/constraints.txt
-typer<0.10,>=0.9.0

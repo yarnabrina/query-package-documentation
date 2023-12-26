@@ -6,7 +6,7 @@ from .orchestrate_generation import (
 )
 from .step_1_generation import (
     get_all_member_details,
-    get_all_module_members,
+    get_all_module_contents,
     get_all_package_contents,
 )
 from .step_2_generation import (
@@ -25,7 +25,7 @@ __all__ = [
     "generate_package_dataset",
     "generate_raw_datasets",
     "get_all_member_details",
-    "get_all_module_members",
+    "get_all_module_contents",
     "get_all_package_contents",
     "load_json_dataset",
     "store_json_dataset",

@@ -1,6 +1,9 @@
 import enum
 import typing
 
+import pydantic
+from langchain.vectorstores.chroma import Chroma
+
 
 class LanguageModelType(str, enum.Enum):
     HUGGINGFACE_STANDARD = "huggingface_standard"
@@ -23,5 +26,14 @@ ZEPHYR_MODEL = QuantisedModel(
     "TheBloke/zephyr-7B-beta-GGUF", "zephyr-7b-beta.Q4_K_M.gguf", "mistral"
 )
 
+ValidatedChroma = pydantic.InstanceOf[Chroma]
 
-__all__ = ["LLAMA2_MODEL", "MISTRAL_MODEL", "ZEPHYR_MODEL", "LanguageModelType", "QuantisedModel"]
+
+__all__ = [
+    "LLAMA2_MODEL",
+    "MISTRAL_MODEL",
+    "ZEPHYR_MODEL",
+    "LanguageModelType",
+    "QuantisedModel",
+    "ValidatedChroma",
+]

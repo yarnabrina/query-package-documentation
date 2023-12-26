@@ -1,12 +1,13 @@
 import itertools
 import json
+import logging
 import pathlib
 
 import pydantic
 
 from .step_1_generation import (
     get_all_member_details,
-    get_all_module_members,
+    get_all_module_contents,
     get_all_package_contents,
 )
 from .step_2_generation import (
@@ -16,37 +17,46 @@ from .step_2_generation import (
 )
 from .utils_generation import Dataset, JSONDataset, JSONDocument, MemberDetails, Module
 
+LOGGER = logging.getLogger(__name__)
+
 
 @pydantic.validate_call(validate_return=True)
 def generate_raw_datasets(package_name: str) -> list[Dataset]:
     all_package_contents = get_all_package_contents(package_name)
+    LOGGER.info(f"Enlisted total {len(all_package_contents)} packages recursively.")
 
-    all_module_members: list[Module] = []
+    all_module_contents: list[Module] = []
     for package_contents in all_package_contents:
         for module in package_contents.children_modules_names:
             try:
-                module_members = get_all_module_members(
+                module_contents = get_all_module_contents(
                     f"{package_contents.package_qualified_name}.{module}"
                 )
             except ImportError:
+                LOGGER.warning(f"Failed to import {module=}.")
+
                 continue
 
-            all_module_members.append(module_members)
+            all_module_contents.append(module_contents)
+
+    LOGGER.info(f"Enlisted total {len(all_module_contents)} modules recursively.")
 
     all_member_details: list[MemberDetails] = []
-    for module_members in all_module_members:
-        for member in module_members.module_members:
+    for module_contents in all_module_contents:
+        for member in module_contents.module_members:
             try:
                 member_details = get_all_member_details(
-                    module_members.module_qualified_name, member.member_name, member.member_object
+                    module_contents.module_qualified_name, member.member_name, member.member_object
                 )
             except (TypeError, ValueError):
                 continue
 
             all_member_details.append(member_details)
 
+    LOGGER.info(f"Enlisted total {len(all_member_details)} members recursively.")
+
     package_datasets = map(generate_package_dataset, all_package_contents)
-    module_datasets = map(generate_module_dataset, all_module_members)
+    module_datasets = map(generate_module_dataset, all_module_contents)
     member_datasets = map(generate_member_dataset, all_member_details)
 
     combined_datasets = itertools.chain(package_datasets, module_datasets, *member_datasets)

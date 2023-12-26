@@ -2,7 +2,6 @@ import pathlib
 
 from langchain.docstore.document import Document
 from langchain.schema.runnable import RunnableSerializable
-from langchain.vectorstores.chroma import Chroma
 
 from .step_1_retrieval import (
     create_document_embedder,
@@ -11,7 +10,7 @@ from .step_1_retrieval import (
     partition_documents,
 )
 from .step_2_retrieval import create_database_retriever, create_llm, generate_retrieval_chain
-from .utils_retrieval import LanguageModelType
+from .utils_retrieval import LanguageModelType, ValidatedChroma
 
 
 def load_source_documents(file_path: pathlib.Path) -> list[Document]:
@@ -23,7 +22,7 @@ def load_source_documents(file_path: pathlib.Path) -> list[Document]:
 
 def create_embedding_database(
     embedding_model: str, directory_path: pathlib.Path, source_documents: list[Document]
-) -> Chroma:
+) -> ValidatedChroma:
     document_embedder = create_document_embedder(embedding_model)
 
     vector_store = create_vector_store(document_embedder, directory_path)
@@ -32,11 +31,11 @@ def create_embedding_database(
     return vector_store
 
 
-def store_embedding_database(vector_store: Chroma) -> None:
+def store_embedding_database(vector_store: ValidatedChroma) -> None:
     vector_store.persist()
 
 
-def load_embedding_database(embedding_model: str, directory_path: pathlib.Path) -> Chroma:
+def load_embedding_database(embedding_model: str, directory_path: pathlib.Path) -> ValidatedChroma:
     document_embedder = create_document_embedder(embedding_model)
 
     vector_store = create_vector_store(document_embedder, directory_path)
@@ -45,7 +44,9 @@ def load_embedding_database(embedding_model: str, directory_path: pathlib.Path) 
 
 
 def prepare_question_answer_chain(
-    embedding_database: Chroma, language_model_type: LanguageModelType, language_model_name: str
+    embedding_database: ValidatedChroma,
+    language_model_type: LanguageModelType,
+    language_model_name: str,
 ) -> RunnableSerializable:
     database_retriever = create_database_retriever(embedding_database)
     llm = create_llm(language_model_type, language_model_name)

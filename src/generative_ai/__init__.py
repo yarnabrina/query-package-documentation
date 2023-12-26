@@ -1,19 +1,23 @@
-from .dataset_generation import generate_json_dataset, generate_raw_dataset, store_json_dataset
-from .information_retrieval import (
-    create_embedding_database,
-    load_embedding_database,
-    load_source_documents,
-    prepare_question_answer_chain,
-    store_embedding_database,
-)
+import importlib.resources
+import json
+import typing
 
-__all__ = [
-    "create_embedding_database",
-    "generate_json_dataset",
-    "generate_raw_dataset",
-    "load_embedding_database",
-    "load_source_documents",
-    "prepare_question_answer_chain",
-    "store_embedding_database",
-    "store_json_dataset",
-]
+
+class PackageMetadata(typing.TypedDict):
+    Name: str
+    Version: str
+    Description: str
+    Keywords: list[str]
+    License: str
+    Maintainers: list[str]
+    Authors: list[str]
+    Links: dict[str, str]
+
+
+METADATA_CONTENTS: str = (
+    importlib.resources.files("generative_ai").joinpath("metadata.json").read_text()
+)
+METADATA: PackageMetadata = json.loads(METADATA_CONTENTS)
+
+__version__: str = METADATA["Version"]
+__all__: list[str] = ["METADATA", "__version__"]

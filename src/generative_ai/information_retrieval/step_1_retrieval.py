@@ -6,6 +6,8 @@ from langchain.embeddings import HuggingFaceEmbeddings
 from langchain.text_splitter import RecursiveCharacterTextSplitter
 from langchain.vectorstores.chroma import Chroma
 
+from .utils_retrieval import ValidatedChroma
+
 
 def load_json_documents(file_path: pathlib.Path) -> list[Document]:
     json_loader = JSONLoader(file_path, ".retrieval_documents[]")
@@ -27,7 +29,9 @@ def create_document_embedder(embedding_model: str) -> HuggingFaceEmbeddings:
     return embedder
 
 
-def create_vector_store(embedder: HuggingFaceEmbeddings, directory_path: pathlib.Path) -> Chroma:
+def create_vector_store(
+    embedder: HuggingFaceEmbeddings, directory_path: pathlib.Path
+) -> ValidatedChroma:
     vector_store = Chroma(embedding_function=embedder, persist_directory=str(directory_path))
 
     return vector_store

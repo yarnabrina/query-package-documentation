@@ -1,6 +1,0 @@
-chromadb<0.5,>=0.4.15
-ctransformers<0.3,>=0.2.27
-jq<1.7,>=1.6.0
-langchain==0.0.348
-sentence-transformers<2.3,>=2.2.2
-transformers<4.36,>=4.35.0

@@ -1,6 +1,10 @@
 chromadb
 ctransformers
+gradio
 jq
 langchain
+numpydoc
+pydantic
 sentence-transformers
 transformers
+typer

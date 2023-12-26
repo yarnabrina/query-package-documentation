@@ -2,6 +2,7 @@ import enum
 import importlib
 import importlib.util
 import inspect
+import logging
 import pkgutil
 import types
 import typing
@@ -27,12 +28,16 @@ from .utils_generation import (
     Warns,
 )
 
+LOGGER = logging.getLogger(__name__)
+
 
 @pydantic.validate_call(validate_return=True)
 def import_package(package_name: str) -> pydantic.InstanceOf[types.ModuleType]:
     package_spec = importlib.util.find_spec(package_name)
 
     if package_spec is None:
+        LOGGER.error(f"spec for {package_name=} could not be found")
+
         raise ValueError(f"{package_name=} is not found")
 
     package = importlib.util.module_from_spec(package_spec)
@@ -54,11 +59,15 @@ def get_all_package_contents(package_name: str) -> list[Package]:
         try:
             current_package_loader = import_package(current_package_name)
         except ImportError:
+            LOGGER.warning(f"{current_package_name=} could not be imported")
+
             continue
 
         try:
             current_package = importlib.import_module(current_package_name)
         except ImportError:
+            LOGGER.warning(f"{current_package_name=} could not be imported")
+
             continue
 
         current_package_sub_packages = []
@@ -104,12 +113,12 @@ def get_all_package_contents(package_name: str) -> list[Package]:
 
 
 @pydantic.validate_call(validate_return=True)
-def get_all_module_members(module_name: str) -> Module:
+def get_all_module_contents(module_name: str) -> Module:
     module_hierarchy = module_name.split(".")
 
     module = importlib.import_module(module_name)
 
-    module_members = inspect.getmembers(
+    module_contents = inspect.getmembers(
         module, predicate=lambda member: inspect.getmodule(member) == module
     )
 
@@ -120,7 +129,7 @@ def get_all_module_members(module_name: str) -> Module:
         package_name=".".join(module_hierarchy[:-1]),
         module_members=[
             ModuleMember(member_name=member[0], member_object=member[1])
-            for member in module_members
+            for member in module_contents
         ],
         module_summary=inspect.getdoc(module),
         module_all_exports=getattr(importlib.import_module(module_name), "__all__", None),
@@ -275,7 +284,7 @@ def get_all_member_details(
 
 __all__ = [
     "get_all_member_details",
-    "get_all_module_members",
+    "get_all_module_contents",
     "get_all_package_contents",
     "get_all_parameters_details",
     "import_package",
