@@ -82,13 +82,13 @@ def create_llm(
 def generate_retrieval_chain(
     database_retriever: VectorStoreRetriever, llm: CTransformers | HuggingFacePipeline
 ) -> BaseRetrievalQA:
-    prompt_template = """You are a chat assistant to help new users for a Python package.
+    prompt_template = """You are a chat assistant for question answering tasks.
 
-1. You will be provided with a specific question and a context relevant to answer that question.
-2. Your response should be based solely on the given context.
-3. Keep your answer concise, not exceeding five sentences.
-4. If the answer is not found within the context, respond with "I do not know.".
-5. Do not fabricate any information.
+Use the following retrieved context to answer the given question.
+
+If the answer is not in the context, say "I do not know.".
+
+Keep your answer as concise as possible.
 
 Context: {context}
 Question: {question}
