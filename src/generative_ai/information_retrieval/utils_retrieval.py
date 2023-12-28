@@ -5,6 +5,11 @@ import pydantic
 from langchain.vectorstores.chroma import Chroma
 
 
+class RetrievalType(str, enum.Enum):
+    MMR = "mmr"
+    SIMILARITY = "similarity"
+
+
 class LanguageModelType(str, enum.Enum):
     HUGGINGFACE_STANDARD = "huggingface_standard"
     LLAMA2_7B_GGUF = "llama2_7b_gguf"
@@ -35,5 +40,6 @@ __all__ = [
     "ZEPHYR_MODEL",
     "LanguageModelType",
     "QuantisedModel",
+    "RetrievalType",
     "ValidatedChroma",
 ]

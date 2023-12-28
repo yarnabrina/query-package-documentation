@@ -2,7 +2,7 @@ import pathlib
 
 import gradio
 
-from generative_ai.information_retrieval import LanguageModelType
+from generative_ai.information_retrieval import LanguageModelType, RetrievalType
 from generative_ai.top_level import create_database, create_dataset, get_response
 
 
@@ -32,16 +32,26 @@ def generate_database(
         return database_path.resolve()
 
 
-def answer_query(
+def answer_query(  # noqa: PLR0913
     query: str,
     embedding_model: str,
     database_directory: pathlib.Path,
+    search_type: RetrievalType,
+    number_of_documents: int,
+    number_of_diverse_documents: int,
     language_model_type: LanguageModelType,
     language_model_name: str,
 ) -> tuple[str, list[str]]:
     try:
         response = get_response(
-            query, embedding_model, database_directory, language_model_type, language_model_name
+            query,
+            embedding_model,
+            database_directory,
+            search_type,
+            number_of_documents,
+            number_of_diverse_documents,
+            language_model_type,
+            language_model_name,
         )
     except FileNotFoundError as error:
         raise gradio.Error(message=str(error)) from error
@@ -108,6 +118,29 @@ def step3_tab_flow() -> None:
         )
         database_directory_step3_input = gradio.Textbox(label="path to directory storing database")
 
+    with gradio.Accordion(label="Retrieval", open=False):
+        search_type_step3_input = gradio.Radio(
+            choices=[(element.name, element.value) for element in RetrievalType],
+            value=RetrievalType.MMR.value,
+            label="kind of retrieval",
+        )
+        number_of_documents_step3_input = gradio.Slider(
+            minimum=1,
+            maximum=10,
+            value=3,
+            step=1,
+            label="number of documents to retrieve",
+            randomize=False,
+        )
+        number_of_diverse_documents_step3_input = gradio.Slider(
+            minimum=2,
+            maximum=30,
+            value=5,
+            step=3,
+            label="number of diverse documents to retrieve",
+            randomize=False,
+        )
+
     with gradio.Accordion(label="Language Model", open=False):
         language_model_type_step3_input = gradio.Radio(
             choices=[(element.name, element.value) for element in LanguageModelType],
@@ -130,6 +163,9 @@ def step3_tab_flow() -> None:
             query_step3_input,
             embedding_model_step3_input,
             database_directory_step3_input,
+            search_type_step3_input,
+            number_of_documents_step3_input,
+            number_of_diverse_documents_step3_input,
             language_model_type_step3_input,
             language_model_name_step3_input,
         ],

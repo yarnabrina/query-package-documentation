@@ -7,6 +7,7 @@ import pydantic
 from .dataset_generation import generate_json_dataset, generate_raw_datasets, store_json_dataset
 from .information_retrieval import (
     LanguageModelType,
+    RetrievalType,
     create_embedding_database,
     load_embedding_database,
     load_source_documents,
@@ -68,10 +69,13 @@ def create_database(
 
 
 @pydantic.validate_call(validate_return=True)
-def get_response(
+def get_response(  # noqa: PLR0913
     question: str,
     embedding_model: str,
     database_directory: pathlib.Path,
+    search_type: RetrievalType,
+    number_of_documents: int,
+    number_of_diverse_documents: int,
     language_model_type: LanguageModelType,
     language_model_name: str,
 ) -> Response:
@@ -84,7 +88,12 @@ def get_response(
 
     embedding_database = load_embedding_database(embedding_model, database_directory)
     question_answer_chain = prepare_question_answer_chain(
-        embedding_database, language_model_type, language_model_name
+        embedding_database,
+        search_type,
+        number_of_documents,
+        number_of_diverse_documents,
+        language_model_type,
+        language_model_name,
     )
 
     answer = question_answer_chain.invoke(question)

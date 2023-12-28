@@ -3,7 +3,7 @@ import sys
 
 import typer
 
-from generative_ai.information_retrieval import LanguageModelType
+from generative_ai.information_retrieval import LanguageModelType, RetrievalType
 from generative_ai.top_level import create_database, create_dataset, get_response
 
 CLI_APPLICATION = typer.Typer(name="CLI for Generative AI aaplication")
@@ -41,16 +41,26 @@ def generate_database(
 
 
 @CLI_APPLICATION.command()
-def answer_query(
+def answer_query(  # noqa: PLR0913
     query: str,
     embedding_model: str = "sentence-transformers/all-MiniLM-L6-v2",
     database_directory: pathlib.Path = pathlib.Path("embeddings_database"),
+    search_type: RetrievalType = RetrievalType.MMR,
+    number_of_documents: int = 3,
+    number_of_diverse_documents: int = 5,
     language_model_type: LanguageModelType = LanguageModelType.HUGGINGFACE_STANDARD,
     language_model_name: str = "google/flan-t5-large",
 ) -> None:
     try:
         response = get_response(
-            query, embedding_model, database_directory, language_model_type, language_model_name
+            query,
+            embedding_model,
+            database_directory,
+            search_type,
+            number_of_documents,
+            number_of_diverse_documents,
+            language_model_type,
+            language_model_name,
         )
     except FileNotFoundError as error:
         typer.echo(message=str(error), err=True)

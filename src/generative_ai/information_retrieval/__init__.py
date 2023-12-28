@@ -18,6 +18,7 @@ from .utils_retrieval import (
     ZEPHYR_MODEL,
     LanguageModelType,
     QuantisedModel,
+    RetrievalType,
     ValidatedChroma,
 )
 
@@ -27,6 +28,7 @@ __all__ = [
     "ZEPHYR_MODEL",
     "LanguageModelType",
     "QuantisedModel",
+    "RetrievalType",
     "ValidatedChroma",
     "create_database_retriever",
     "create_document_embedder",

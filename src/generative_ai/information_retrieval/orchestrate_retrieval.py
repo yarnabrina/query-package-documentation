@@ -10,7 +10,7 @@ from .step_1_retrieval import (
     partition_documents,
 )
 from .step_2_retrieval import create_database_retriever, create_llm, generate_retrieval_chain
-from .utils_retrieval import LanguageModelType, ValidatedChroma
+from .utils_retrieval import LanguageModelType, RetrievalType, ValidatedChroma
 
 
 def load_source_documents(file_path: pathlib.Path) -> list[Document]:
@@ -43,12 +43,17 @@ def load_embedding_database(embedding_model: str, directory_path: pathlib.Path) 
     return vector_store
 
 
-def prepare_question_answer_chain(
+def prepare_question_answer_chain(  # noqa: PLR0913
     embedding_database: ValidatedChroma,
+    search_type: RetrievalType,
+    number_of_documents: int,
+    number_of_diverse_documents: int,
     language_model_type: LanguageModelType,
     language_model_name: str,
 ) -> RunnableSerializable:
-    database_retriever = create_database_retriever(embedding_database)
+    database_retriever = create_database_retriever(
+        embedding_database, search_type, number_of_documents, number_of_diverse_documents
+    )
     llm = create_llm(language_model_type, language_model_name)
 
     question_answer_chain = generate_retrieval_chain(database_retriever, llm)

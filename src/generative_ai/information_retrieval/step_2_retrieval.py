@@ -11,15 +11,20 @@ from .utils_retrieval import (
     MISTRAL_MODEL,
     ZEPHYR_MODEL,
     LanguageModelType,
+    RetrievalType,
     ValidatedChroma,
 )
 
 
 def create_database_retriever(
     embedding_database: ValidatedChroma,
+    search_type: RetrievalType,
+    number_of_documents: int,
+    number_of_diverse_documents: int,
 ) -> VectorStoreRetriever:
     retriever = embedding_database.as_retriever(
-        search_type="mmr", search_kwargs={"k": 3, "fetch_k": 5}
+        search_type=search_type,
+        search_kwargs={"k": number_of_documents, "fetch_k": number_of_diverse_documents},
     )
 
     return retriever
