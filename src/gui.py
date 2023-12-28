@@ -38,7 +38,7 @@ def answer_query(
     database_directory: pathlib.Path,
     language_model_type: LanguageModelType,
     language_model_name: str,
-) -> str:
+) -> tuple[str, list[str]]:
     try:
         response = get_response(
             query, embedding_model, database_directory, language_model_type, language_model_name
@@ -46,11 +46,11 @@ def answer_query(
     except FileNotFoundError as error:
         raise gradio.Error(message=str(error)) from error
     else:
-        return response.answer
+        return response.answer, response.source_documents
 
 
 def step1_tab_flow() -> None:
-    with gradio.Row():
+    with gradio.Group():
         package_name_step1_input = gradio.Textbox(label="name to import package")
         dataset_file_step1_input = gradio.Textbox(
             value="json_documents.json", label="file where generated dataset needs to be stored"
@@ -69,10 +69,9 @@ def step1_tab_flow() -> None:
 
 
 def step2_tab_flow() -> None:
-    with gradio.Row():
-        dataset_file_step2_input = gradio.File(
-            file_types=[".json"], label="path to file storing dataset"
-        )
+    dataset_file_step2_input = gradio.Textbox(label="path to file storing dataset")
+
+    with gradio.Group():
         embedding_model_step2_input = gradio.Textbox(
             value="sentence-transformers/all-MiniLM-L6-v2", label="embedding model to use"
         )
@@ -103,13 +102,13 @@ def step2_tab_flow() -> None:
 def step3_tab_flow() -> None:
     query_step3_input = gradio.Textbox(label="user question")
 
-    with gradio.Row():
+    with gradio.Group():
         embedding_model_step3_input = gradio.Textbox(
             value="sentence-transformers/all-MiniLM-L6-v2", label="embedding model to use"
         )
         database_directory_step3_input = gradio.Textbox(label="path to directory storing database")
 
-    with gradio.Row():
+    with gradio.Accordion(label="Language Model", open=False):
         language_model_type_step3_input = gradio.Radio(
             choices=[(element.name, element.value) for element in LanguageModelType],
             value=LanguageModelType.HUGGINGFACE_STANDARD.value,
@@ -120,7 +119,10 @@ def step3_tab_flow() -> None:
         )
 
     step3_button = gradio.Button(value="Get Response")
-    step3_output = gradio.Textbox(label="answer from language model")
+
+    with gradio.Group():
+        step3_output = gradio.Textbox(label="answer from language model")
+        step3_additional_outputs = gradio.JSON(label="relevant documents")
 
     step3_button.click(
         answer_query,
@@ -131,19 +133,44 @@ def step3_tab_flow() -> None:
             language_model_type_step3_input,
             language_model_name_step3_input,
         ],
-        outputs=[step3_output],
+        outputs=[step3_output, step3_additional_outputs],
     )
 
 
 def main() -> None:
-    with gradio.Blocks(title="GUI for Generative AI aaplication") as gui_application:
-        with gradio.Tab("Step 1"):
+    gui_application_title = "GUI for Generative AI aaplication"
+    gui_application_description = """# Retrieval Augmented Generation from package docstrings .
+
+## Dataset Generation
+
+1. list all modules in the package (recursively from all sub-packages)
+2. generate a set of documents based on package/module/object docstrings
+3. documents are stored in a JSON dataset for retrieval (and tuning, optionally)
+
+## Database Generation
+
+1. read the retrieval dataset
+2. generate embeddings for each document
+3. store dpcument embeddings in a vector database
+
+## Response Generation
+
+1. read the retrieval database
+2. generate embeddings for user question
+3. retrieve most similar documents from database
+4. pass relevant documents to language model as context
+5. generate answer using language model"""
+
+    with gradio.Blocks(title=gui_application_title) as gui_application:
+        _ = gradio.Markdown(value=gui_application_description, label="Description")
+
+        with gradio.Tab(label="Step 1"):
             step1_tab_flow()
 
-        with gradio.Tab("Step 2"):
+        with gradio.Tab(label="Step 2"):
             step2_tab_flow()
 
-        with gradio.Tab("Step 3"):
+        with gradio.Tab(label="Step 3"):
             step3_tab_flow()
 
     gui_application.launch(share=False, show_error=True, show_api=False)
