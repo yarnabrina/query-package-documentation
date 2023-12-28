@@ -49,7 +49,7 @@ def answer_query(
         return response.answer, response.source_documents
 
 
-def step1_tab_flow() -> None:
+def step1_tab_flow() -> gradio.Textbox:
     with gradio.Group():
         package_name_step1_input = gradio.Textbox(label="name to import package")
         dataset_file_step1_input = gradio.Textbox(
@@ -67,9 +67,14 @@ def step1_tab_flow() -> None:
         outputs=[step1_output],
     )
 
+    return step1_output
 
-def step2_tab_flow() -> None:
-    dataset_file_step2_input = gradio.Textbox(label="path to file storing dataset")
+
+def step2_tab_flow(dataset_path: gradio.Textbox) -> tuple[gradio.Textbox, gradio.Textbox]:
+    if dataset_path.value is None:
+        dataset_file_step2_input = dataset_path
+    else:
+        dataset_file_step2_input = gradio.Textbox(label="path to file storing dataset")
 
     with gradio.Group():
         embedding_model_step2_input = gradio.Textbox(
@@ -98,15 +103,26 @@ def step2_tab_flow() -> None:
         outputs=[step2_output],
     )
 
+    return step2_output, embedding_model_step2_input
 
-def step3_tab_flow() -> None:
+
+def step3_tab_flow(database_path: gradio.Textbox, embedding_model: gradio.Textbox) -> None:
     query_step3_input = gradio.Textbox(label="user question")
 
     with gradio.Group():
-        embedding_model_step3_input = gradio.Textbox(
-            value="sentence-transformers/all-MiniLM-L6-v2", label="embedding model to use"
-        )
-        database_directory_step3_input = gradio.Textbox(label="path to directory storing database")
+        if database_path.value is not None:
+            database_directory_step3_input = database_path
+        else:
+            database_directory_step3_input = gradio.Textbox(
+                label="path to directory storing database"
+            )
+
+        if embedding_model.value is not None:
+            embedding_model_step3_input = embedding_model
+        else:
+            embedding_model_step3_input = gradio.Textbox(
+                value="sentence-transformers/all-MiniLM-L6-v2", label="embedding model to use"
+            )
 
     with gradio.Accordion(label="Language Model", open=False):
         language_model_type_step3_input = gradio.Radio(
@@ -164,14 +180,17 @@ def main() -> None:
     with gradio.Blocks(title=gui_application_title) as gui_application:
         _ = gradio.Markdown(value=gui_application_description, label="Description")
 
-        with gradio.Tab(label="Step 1"):
-            step1_tab_flow()
+        with gradio.Tabs() as steps:
+            with gradio.Tab(label="Step 1", id=1):
+                dataset_path = step1_tab_flow()
+                dataset_path.select(lambda: gradio.Tabs(selected=2), outputs=[steps])
 
-        with gradio.Tab(label="Step 2"):
-            step2_tab_flow()
+            with gradio.Tab(label="Step 2", id=2):
+                database_path, embedding_model = step2_tab_flow(dataset_path)
+                database_path.select(lambda: gradio.Tabs(selected=3), outputs=[steps])
 
-        with gradio.Tab(label="Step 3"):
-            step3_tab_flow()
+            with gradio.Tab(label="Step 3", id=3):
+                step3_tab_flow(database_path, embedding_model)
 
     gui_application.launch(share=False, show_error=True, show_api=False)
 
