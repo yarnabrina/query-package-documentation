@@ -1,8 +1,10 @@
 from .orchestrate_retrieval import (
+    configure_language_model,
     create_embedding_database,
     load_embedding_database,
     load_source_documents,
     prepare_question_answer_chain,
+    run_question_answer_chain,
     store_embedding_database,
 )
 from .step_1_retrieval import (
@@ -12,24 +14,29 @@ from .step_1_retrieval import (
     partition_documents,
 )
 from .step_2_retrieval import create_database_retriever, create_llm, generate_retrieval_chain
+from .step_3_retrieval import CaptureDetailsCallback
 from .utils_retrieval import (
-    LLAMA2_MODEL,
-    MISTRAL_MODEL,
-    ZEPHYR_MODEL,
-    LanguageModelType,
+    LanguageModel,
+    LanguageModelAdapter,
+    PipelineType,
     QuantisedModel,
     RetrievalType,
+    StandardModel,
+    TransformerType,
     ValidatedChroma,
 )
 
 __all__ = [
-    "LLAMA2_MODEL",
-    "MISTRAL_MODEL",
-    "ZEPHYR_MODEL",
-    "LanguageModelType",
+    "CaptureDetailsCallback",
+    "LanguageModel",
+    "LanguageModelAdapter",
+    "PipelineType",
     "QuantisedModel",
     "RetrievalType",
+    "StandardModel",
+    "TransformerType",
     "ValidatedChroma",
+    "configure_language_model",
     "create_database_retriever",
     "create_document_embedder",
     "create_embedding_database",
@@ -41,5 +48,6 @@ __all__ = [
     "load_json_documents",
     "partition_documents",
     "prepare_question_answer_chain",
+    "run_question_answer_chain",
     "store_embedding_database",
 ]

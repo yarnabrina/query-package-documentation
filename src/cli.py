@@ -3,7 +3,7 @@ import sys
 
 import typer
 
-from generative_ai.information_retrieval import LanguageModelType, RetrievalType
+from generative_ai.information_retrieval import PipelineType, RetrievalType, TransformerType
 from generative_ai.top_level import create_database, create_dataset, get_response
 
 CLI_APPLICATION = typer.Typer(name="CLI for Generative AI aaplication")
@@ -47,9 +47,14 @@ def answer_query(  # noqa: PLR0913
     database_directory: pathlib.Path = pathlib.Path("embeddings_database"),
     search_type: RetrievalType = RetrievalType.MMR,
     number_of_documents: int = 3,
-    number_of_diverse_documents: int = 5,
-    language_model_type: LanguageModelType = LanguageModelType.HUGGINGFACE_STANDARD,
-    language_model_name: str = "google/flan-t5-large",
+    initial_number_of_documents: int = 5,
+    diversity_level: float = 0.5,
+    language_model_type: TransformerType = TransformerType.STANDARD_TRANSFORMERS,
+    standard_pipeline_type: PipelineType = PipelineType.TEXT2TEXT_GENERATION,
+    standard_model_name: str = "google/flan-t5-large",
+    quantised_model_name: str = "TheBloke/zephyr-7B-beta-GGUF",
+    quantised_model_file: str = "zephyr-7b-beta.Q4_K_M.gguf",
+    quantised_model_type: str = "mistral",
 ) -> None:
     try:
         response = get_response(
@@ -58,9 +63,14 @@ def answer_query(  # noqa: PLR0913
             database_directory,
             search_type,
             number_of_documents,
-            number_of_diverse_documents,
+            initial_number_of_documents,
+            diversity_level,
             language_model_type,
-            language_model_name,
+            standard_pipeline_type,
+            standard_model_name,
+            quantised_model_name,
+            quantised_model_file,
+            quantised_model_type,
         )
     except FileNotFoundError as error:
         typer.echo(message=str(error), err=True)
@@ -68,6 +78,7 @@ def answer_query(  # noqa: PLR0913
     else:
         typer.echo(f"Query: {response.query}")
         typer.echo(f"Answer: {response.answer}")
+        typer.echo(f"Duration: {response.llm_duration:.2f} seconds")
 
         for counter, source_document in enumerate(response.source_documents):
             typer.echo(f"Source {counter + 1}: {source_document}")

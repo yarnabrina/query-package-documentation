@@ -6,12 +6,15 @@ import pydantic
 
 from .dataset_generation import generate_json_dataset, generate_raw_datasets, store_json_dataset
 from .information_retrieval import (
-    LanguageModelType,
+    PipelineType,
     RetrievalType,
+    TransformerType,
+    configure_language_model,
     create_embedding_database,
     load_embedding_database,
     load_source_documents,
     prepare_question_answer_chain,
+    run_question_answer_chain,
     store_embedding_database,
 )
 from .utils_top_level import Response
@@ -26,7 +29,7 @@ def create_dataset(
     if dataset_file.exists() and not force:
         LOGGER.error(f"{dataset_file=} refers to an existing file but {force=}")
 
-        raise FileExistsError("Dataset exists already, skipping. Use force if needed.")
+        raise FileExistsError("Dataset exists already, skipping.")
 
     if dataset_file.exists():
         dataset_file.unlink()
@@ -47,7 +50,7 @@ def create_database(
     if database_directory.exists() and not force:
         LOGGER.error(f"{database_directory=} refers to an existing file but {force=}")
 
-        raise FileExistsError("Dataset exists already, skipping. Use force if needed.")
+        raise FileExistsError("Dataset exists already, skipping.")
 
     if database_directory.exists():
         shutil.rmtree(database_directory)
@@ -75,9 +78,14 @@ def get_response(  # noqa: PLR0913
     database_directory: pathlib.Path,
     search_type: RetrievalType,
     number_of_documents: int,
-    number_of_diverse_documents: int,
-    language_model_type: LanguageModelType,
-    language_model_name: str,
+    initial_number_of_documents: int,
+    diversity_level: float,
+    language_model_type: TransformerType,
+    standard_pipeline_type: PipelineType,
+    standard_model_name: str,
+    quantised_model_name: str,
+    quantised_model_file: str,
+    quantised_model_type: str,
 ) -> Response:
     if not database_directory.exists():
         LOGGER.error(f"{database_directory=} refers to a non-existing directory")
@@ -87,16 +95,24 @@ def get_response(  # noqa: PLR0913
         )
 
     embedding_database = load_embedding_database(embedding_model, database_directory)
+    language_model = configure_language_model(
+        language_model_type,
+        standard_pipeline_type,
+        standard_model_name,
+        quantised_model_name,
+        quantised_model_file,
+        quantised_model_type,
+    )
     question_answer_chain = prepare_question_answer_chain(
         embedding_database,
         search_type,
         number_of_documents,
-        number_of_diverse_documents,
-        language_model_type,
-        language_model_name,
+        initial_number_of_documents,
+        diversity_level,
+        language_model,
     )
 
-    answer = question_answer_chain.invoke(question)
+    answer, callback = run_question_answer_chain(question_answer_chain, question)
 
     return Response.model_validate(
         {
@@ -105,6 +121,8 @@ def get_response(  # noqa: PLR0913
             "source_documents": [
                 source_document.page_content for source_document in answer["source_documents"]
             ],
+            "used_prompt": callback.effective_prompt,
+            "llm_duration": callback.effective_duration,
         }
     )
 

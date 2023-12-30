@@ -2,6 +2,7 @@ import enum
 import typing
 
 import pydantic
+import typing_extensions
 from langchain.vectorstores.chroma import Chroma
 
 
@@ -10,36 +11,47 @@ class RetrievalType(str, enum.Enum):
     SIMILARITY = "similarity"
 
 
-class LanguageModelType(str, enum.Enum):
-    HUGGINGFACE_STANDARD = "huggingface_standard"
-    LLAMA2_7B_GGUF = "llama2_7b_gguf"
-    MISTRAL_7B_GGUF = "mistral_7b_gguf"
-    ZEPHYR_7B_GGUF = "zephyr_7b_gguf"
+class TransformerType(str, enum.Enum):
+    STANDARD_TRANSFORMERS = "standard_transformers"
+    QUANTISED_CTRANSFORMERS = "quantised_ctransformers"
 
 
-class QuantisedModel(typing.NamedTuple):
-    model: str
-    model_file: str
-    model_type: str
+class PipelineType(str, enum.Enum):
+    TEXT_GENERATION = "text-generation"
+    TEXT2TEXT_GENERATION = "text2text-generation"
 
 
-LLAMA2_MODEL = QuantisedModel("TheBloke/Llama-2-7B-GGUF", "llama-2-7b.Q4_K_M.gguf", "llama")
-MISTRAL_MODEL = QuantisedModel(
-    "TheBloke/Mistral-7B-v0.1-GGUF", "mistral-7b-v0.1.Q4_K_M.gguf", "mistral"
+class StandardModel(pydantic.BaseModel):
+    language_model_type: typing.Literal[TransformerType.STANDARD_TRANSFORMERS]
+    standard_pipeline_type: PipelineType
+    standard_model_name: str
+
+
+class QuantisedModel(pydantic.BaseModel):
+    language_model_type: typing.Literal[TransformerType.QUANTISED_CTRANSFORMERS]
+    quantised_model_name: str
+    quantised_model_file: str
+    quantised_model_type: str
+
+
+LanguageModel = typing_extensions.TypeAliasType(
+    "LanguageModel",
+    typing.Annotated[
+        QuantisedModel | StandardModel, pydantic.Field(discriminator="language_model_type")
+    ],
 )
-ZEPHYR_MODEL = QuantisedModel(
-    "TheBloke/zephyr-7B-beta-GGUF", "zephyr-7b-beta.Q4_K_M.gguf", "mistral"
-)
+LanguageModelAdapter = pydantic.TypeAdapter(LanguageModel)
 
 ValidatedChroma = pydantic.InstanceOf[Chroma]
 
 
 __all__ = [
-    "LLAMA2_MODEL",
-    "MISTRAL_MODEL",
-    "ZEPHYR_MODEL",
-    "LanguageModelType",
+    "LanguageModel",
+    "LanguageModelAdapter",
+    "TransformerType",
+    "PipelineType",
     "QuantisedModel",
     "RetrievalType",
+    "StandardModel",
     "ValidatedChroma",
 ]
