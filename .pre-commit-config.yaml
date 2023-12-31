@@ -1,0 +1,174 @@
+repos:
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v4.5.0
+    hooks:
+      - id: check-ast
+      - id: check-case-conflict
+      - id: check-executables-have-shebangs
+      - id: check-json
+      - id: check-merge-conflict
+      - id: check-shebang-scripts-are-executable
+      - id: check-symlinks
+      - id: check-toml
+      - id: check-yaml
+        args:
+          - --allow-multiple-documents
+      - id: detect-private-key
+      - id: end-of-file-fixer
+      - id: mixed-line-ending
+      - id: name-tests-test
+        args:
+          - --pytest-test-first
+      - id: no-commit-to-branch
+      - id: pretty-format-json
+        args:
+          - --autofix
+          - --indent
+          - "4"
+      - id: requirements-txt-fixer
+      - id: trailing-whitespace
+  - repo: https://github.com/asottile/pyupgrade
+    rev: v3.15.0
+    hooks:
+      - id: pyupgrade
+        args:
+          - --keep-runtime-typing
+          - --py311-plus
+  - repo: https://github.com/pycqa/autoflake
+    rev: v2.2.1
+    hooks:
+      - id: autoflake
+        args:
+          - src
+        pass_filenames: false
+  - repo: https://github.com/pycqa/isort
+    rev: 5.13.2
+    hooks:
+      - id: isort
+        args:
+          - src
+        pass_filenames: false
+  - repo: https://github.com/psf/black
+    rev: 23.12.1
+    hooks:
+      - id: black-jupyter
+        args:
+          - src
+        pass_filenames: false
+  - repo: https://github.com/pycqa/bandit
+    rev: 1.7.6
+    hooks:
+      - id: bandit
+        args:
+          - --recursive
+          - --severity-level
+          - high
+          - --confidence-level
+          - high
+          - src
+        pass_filenames: false
+  - repo: https://github.com/pycqa/flake8
+    rev: 6.1.0
+    hooks:
+      - id: flake8
+        args:
+          - src
+        pass_filenames: false
+  # - repo: https://github.com/pre-commit/mirrors-mypy
+  #   rev: v1.7.1
+  #   hooks:
+  #     - id: mypy
+  #       additional_dependencies:
+  #         - pydantic
+  #       args:
+  #         - --ignore-missing-imports
+  #         - --scripts-are-modules
+  #       pass_filenames: false
+  #       stages:
+  #         - manual
+  - repo: https://github.com/PyCQA/pylint
+    rev: v3.0.3
+    hooks:
+      - id: pylint
+        args:
+          - --disable
+          - import-error
+          - src
+        pass_filenames: false
+        stages:
+          - manual
+  # - repo: https://github.com/RobertCraigie/pyright-python
+  #   rev: v1.1.337
+  #   hooks:
+  #     - id: pyright
+  #       pass_filenames: false
+  #       stages:
+  #         - manual
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: v0.1.9
+    hooks:
+      - id: ruff
+        args:
+          - src
+        pass_filenames: false
+  - repo: https://github.com/jendrikseipp/vulture
+    rev: v2.10
+    hooks:
+      - id: vulture
+        pass_filenames: false
+  # - repo: https://github.com/PyCQA/docformatter
+  #   rev: v1.7.5
+  #   hooks:
+  #     - id: docformatter
+  #       additional_dependencies:
+  #         - tomli
+  #       args:
+  #         - --in-place
+  #         - src
+  #       pass_filenames: false
+  # - repo: https://github.com/adamchainz/blacken-docs
+  #   rev: 1.16.0
+  #   hooks:
+  #     - id: blacken-docs
+  #       args:
+  #         - --line-length
+  #         - "87"
+  #         - --target-version
+  #         - py311
+  # - repo: https://github.com/econchick/interrogate
+  #   rev: 1.5.0
+  #   hooks:
+  #     - id: interrogate
+  #       args:
+  #         - src
+  #       pass_filenames: false
+  # - repo: https://github.com/pycqa/pydocstyle
+  #   rev: 6.3.0
+  #   hooks:
+  #     - id: pydocstyle
+  #       additional_dependencies:
+  #         - tomli
+  #       args:
+  #         - src
+  #       pass_filenames: false
+  - repo: https://github.com/tox-dev/pyproject-fmt
+    rev: 1.5.3
+    hooks:
+      - id: pyproject-fmt
+  - repo: https://github.com/abravalheri/validate-pyproject
+    rev: v0.15
+    hooks:
+      - id: validate-pyproject
+  - repo: https://github.com/codespell-project/codespell
+    rev: v2.2.6
+    hooks:
+      - id: codespell
+        additional_dependencies:
+          - tomli
+        args:
+          - --write-changes
+        stages:
+          - manual
+default_language_version:
+  python: python3.11
+fail_fast: false
