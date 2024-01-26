@@ -8,7 +8,7 @@ sys.path.insert(0, "../src")
 
 project = "query-package-documentation"
 version = str(generative_ai.__version__)
-project_copyright = "2024, Anirban Ray"
+project_copyright = "2023-2024, Anirban Ray"
 author = "Anirban Ray"
 release = f"v{version}"
 
