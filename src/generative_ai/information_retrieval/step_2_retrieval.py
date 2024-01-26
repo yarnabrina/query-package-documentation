@@ -1,3 +1,5 @@
+"""Define functionalities to fetch and use relevant information from database."""
+
 import transformers
 from langchain.chains import RetrievalQA
 from langchain.chains.retrieval_qa.base import BaseRetrievalQA
@@ -16,19 +18,84 @@ def create_database_retriever(
     initial_number_of_documents: int,
     diversity_level: float,
 ) -> VectorStoreRetriever:
+    """Prepare a vector store retriever for the retrieval database.
+
+    Parameters
+    ----------
+    embedding_database : Chroma
+        vector store
+    search_type : RetrievalType
+        kind of retrieval algorithm for searching vector store
+    number_of_documents : int
+        number of documents to retrieve
+    initial_number_of_documents : int
+        initial number of documents to consider
+    diversity_level : float
+        similarity between retrieved documents
+
+    Returns
+    -------
+    VectorStoreRetriever
+        vector store retriever
+
+    Raises
+    ------
+    ValueError
+        if retrieval type is not supported
+
+    Notes
+    -----
+    * If ``search_type`` is ``similarity``, only ``number_of_documents`` is used.
+    * For maximal marginal relevance (``MMR``), ``diversity_level`` must be in [0, 1].
+
+        * ``0`` means minimum diversity.
+        * ``1`` means maximum diversity.
+    """
+    match search_type:
+        case RetrievalType.SIMILARITY:
+            retrieval_configurations = {"k": number_of_documents}
+        case RetrievalType.MMR:
+            retrieval_configurations = {
+                "k": number_of_documents,
+                "fetch_k": initial_number_of_documents,
+                "lambda_mult": diversity_level,
+            }
+        case _:
+            raise ValueError("Unexpected retrieval type")
+
     retriever = embedding_database.as_retriever(
-        search_type=search_type,
-        search_kwargs={
-            "k": number_of_documents,
-            "fetch_k": initial_number_of_documents,
-            "lambda_mult": diversity_level,
-        },
+        search_type=search_type, search_kwargs=retrieval_configurations
     )
 
     return retriever
 
 
 def create_llm(language_model: LanguageModel) -> CTransformers | HuggingFacePipeline:
+    """Prepare a large language model.
+
+    Parameters
+    ----------
+    language_model : LanguageModel
+        details of large language model
+
+    Returns
+    -------
+    CTransformers | HuggingFacePipeline
+        loaded large language model
+
+    Raises
+    ------
+    ValueError
+        if language model type is not supported
+
+    Notes
+    -----
+    * At most 256 new tokens will be generated.
+    * Deterministic behaviour is ensured for both types of large language models.
+
+        * For ``transformers`` compatible models, ``top_k`` is set to 1.
+        * For ``ctransformers`` compatible models, ``temperature`` is set to 0.
+    """
     common_parameters = {"max_new_tokens": 256}
 
     match language_model.language_model_type:
@@ -47,7 +114,6 @@ def create_llm(language_model: LanguageModel) -> CTransformers | HuggingFacePipe
                 task=language_model.standard_pipeline_type,
                 model=language_model.standard_model_name,
                 tokenizer=tokeniser,
-                model_kwargs={"low_cpu_mem_usage": True},
                 **common_parameters,
             )
 
@@ -70,6 +136,25 @@ def create_llm(language_model: LanguageModel) -> CTransformers | HuggingFacePipe
 def generate_retrieval_chain(
     database_retriever: VectorStoreRetriever, llm: CTransformers | HuggingFacePipeline
 ) -> BaseRetrievalQA:
+    """Prepare a retrieval chain for question answering.
+
+    Parameters
+    ----------
+    database_retriever : VectorStoreRetriever
+        vector store retriever
+    llm : CTransformers | HuggingFacePipeline
+        large language model
+
+    Returns
+    -------
+    BaseRetrievalQA
+        retrieval chain
+
+    Notes
+    -----
+    * The prompt template instructs the model to not answer if it is missing in the context.
+    * It also instructs the model to keep the answer as concise as possible.
+    """
     prompt_template = """You are a chat assistant for question answering tasks.
 
 Use the following retrieved context to answer the given question.

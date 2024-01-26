@@ -1,3 +1,5 @@
+"""Define functionalities for information retrieval."""
+
 from .orchestrate_retrieval import (
     configure_language_model,
     create_embedding_database,

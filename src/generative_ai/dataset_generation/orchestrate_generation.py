@@ -1,3 +1,5 @@
+"""Define functionalities to orchestrate dataset generation."""
+
 import itertools
 import json
 import logging
@@ -15,17 +17,29 @@ from .step_2_generation import (
     generate_module_dataset,
     generate_package_dataset,
 )
-from .utils_generation import Dataset, JSONDataset, JSONDocument, MemberDetails, Module
+from .utils_generation import Dataset, JSONDataset, JSONDocument, MemberDetails, ModuleDetails
 
 LOGGER = logging.getLogger(__name__)
 
 
 @pydantic.validate_call(validate_return=True)
 def generate_raw_datasets(package_name: str) -> list[Dataset]:
+    """Generate all retrieval and tuning documents for exploring documentation of a package.
+
+    Parameters
+    ----------
+    package_name : str
+        name of the root package to import with
+
+    Returns
+    -------
+    list[Dataset]
+        all retrieval and tuning documents for root package and its contents
+    """
     all_package_contents = get_all_package_contents(package_name)
     LOGGER.info(f"Enlisted total {len(all_package_contents)} packages recursively.")
 
-    all_module_contents: list[Module] = []
+    all_module_contents: list[ModuleDetails] = []
     for package_contents in all_package_contents:
         for module in package_contents.children_modules_names:
             try:
@@ -66,6 +80,18 @@ def generate_raw_datasets(package_name: str) -> list[Dataset]:
 
 @pydantic.validate_call(validate_return=True)
 def generate_json_dataset(raw_datasets: list[Dataset]) -> JSONDataset:
+    """Convert raw documents into JSON format.
+
+    Parameters
+    ----------
+    raw_datasets : list[Dataset]
+        all retrieval and tuning documents for root package and its contents
+
+    Returns
+    -------
+    JSONDataset
+        all details for querying a package documentation in JSON format
+    """
     retrieval_documents: list[str] = []
     tuning_documents: list[JSONDocument] = []
 
@@ -86,12 +112,33 @@ def generate_json_dataset(raw_datasets: list[Dataset]) -> JSONDataset:
 
 @pydantic.validate_call
 def store_json_dataset(json_dataset: JSONDataset, file_path: pathlib.Path) -> None:
+    """Dump JSON dataset into a JSON file.
+
+    Parameters
+    ----------
+    json_dataset : JSONDataset
+        all details for querying a package documentation in JSON format
+    file_path : pathlib.Path
+        path to store JSON dataset
+    """
     with pathlib.Path(file_path).open(mode="w", encoding="utf-8") as file_object:
         json.dump(json_dataset.model_dump(), file_object, indent=4)
 
 
 @pydantic.validate_call(validate_return=True)
 def load_json_dataset(file_path: pathlib.Path) -> JSONDataset:
+    """Load JSON dataset from a JSON file.
+
+    Parameters
+    ----------
+    file_path : pathlib.Path
+        path to load JSON dataset from
+
+    Returns
+    -------
+    JSONDataset
+        all details for querying a package documentation in JSON format
+    """
     with pathlib.Path(file_path).open(mode="r", encoding="utf-8") as file_object:
         json_dataset = json.load(file_object)
 

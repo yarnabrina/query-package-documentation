@@ -6,7 +6,7 @@ requires = [
 
 [project]
 name = "query-package-documentation"
-version = "0.0.1"
+version = "0.0.2"
 description = "A package to explore documentations"
 keywords = [
   "documentation",
@@ -14,17 +14,16 @@ keywords = [
 ]
 license = { file = "LICENSE" }
 maintainers = [
-  { name = "Anirban Ray",  email = "39331844+yarnabrina@users.noreply.github.com" },
+  { name = "Anirban Ray", email = "39331844+yarnabrina@users.noreply.github.com" },
 ]
 authors = [
-  { name = "Anirban Ray",  email = "39331844+yarnabrina@users.noreply.github.com" },
+  { name = "Anirban Ray", email = "39331844+yarnabrina@users.noreply.github.com" },
 ]
 requires-python = "==3.11.*"
 classifiers = [
   "Development Status :: 3 - Alpha",
   "Framework :: Flake8",
   "Framework :: Pydantic",
-  "Framework :: Pytest",
   "Framework :: Sphinx",
   "Intended Audience :: Developers",
   "License :: OSI Approved",
@@ -45,15 +44,14 @@ dynamic=[
 dependencies = [
   "chromadb<0.5,>=0.4.15",
   "ctransformers<0.3,>=0.2.27",
-  "gradio<4.13,>=4.12",
+  "gradio<4.17,>=4.12",
   "jq<1.7,>=1.6",
-  "langchain==0.0.353",
+  "langchain<0.1.5,>=0.1.1",
   "numpydoc<1.7,>=1.6",
   "pydantic<2.6,>=2.4.2",
   "sentence-transformers<2.3,>=2.2.2",
-  "transformers<4.37,>=4.35",
+  "transformers<4.38,>=4.36",
   "typer<0.10,>=0.9",
-  "typing-extensions<4.10,>=4.9",
 ]
 [project.optional-dependencies]
 all = [
@@ -63,21 +61,16 @@ all = [
   "blacken-docs",
   "build",
   "codespell",
-  "coverage[toml]",
   "docformatter[tomli]",
   "flake8",
   "furo",
-  "hypothesis[pytest]",
   "interrogate",
   "isort",
-  "mypy",
-  "nox",
+  "myst-parser[linkify]",
+  "numpydoc",
   "pre-commit",
-  "pydocstyle[toml]",
   "pylint",
   "pyproject-fmt",
-  "pyright",
-  "pytest",
   "pyupgrade",
   "Sphinx",
   "sphinx-copybutton",
@@ -87,22 +80,23 @@ all = [
 ]
 dev = [
   "codespell",
-  "nox",
+  "numpydoc",
   "pre-commit",
 ]
 doc = [
   "furo",
+  "myst-parser[linkify]",
   "Sphinx",
   "sphinx-copybutton",
 ]
 fine-tuning = [
-  "accelerate<0.26,>=0.24.1",
-  "bitsandbytes<0.42,>=0.41.2",
+  "accelerate<0.27,>=0.24.1",
+  "bitsandbytes<0.43,>=0.41.2",
   "datasets<2.17,>=2.15",
   "peft<0.8,>=0.6.2",
   "safetensors<0.5,>=0.4",
   "torch<2.2,>=2.1.1",
-  "transformers<4.37,>=4.35.2",
+  "transformers<4.38,>=4.36",
   "trl<0.8,>=0.7.4",
 ]
 format = [
@@ -118,21 +112,13 @@ lint = [
   "bandit",
   "flake8",
   "interrogate",
-  "mypy",
-  "pydocstyle[toml]",
   "pylint",
-  "pyright",
   "validate-pyproject",
   "vulture",
 ]
 release = [
   "build",
   "twine",
-]
-test = [
-  "coverage[toml]",
-  "hypothesis[pytest]",
-  "pytest",
 ]
 [project.urls]
 "Bug Tracker" = "https://github.com/yarnabrina/query-package-documentation/issues"
@@ -159,9 +145,6 @@ where = [
 include = [
   "generative_ai*",
 ]
-exclude = [
-  "*tests*",
-]
 namespaces = false
 
 [tool.setuptools.package-data]
@@ -181,13 +164,11 @@ line-length = 99
 target-version = [
   "py311",
 ]
-safe = true
 
 [tool.ruff]
 fix = true
 ignore = [
   "COM",
-  "D",
   "D203",
   "D213",
   "DTZ",
@@ -244,9 +225,6 @@ classmethod-decorators = [
 "**/__init__.py" = [
   "F401",
 ]
-"**/test_*.py" = [
-  "S101",
-]
 
 [tool.ruff.pycodestyle]
 max-doc-length = 99
@@ -295,9 +273,6 @@ enable = [
 ]
 disable = [
   "logging-fstring-interpolation",
-  "missing-class-docstring",
-  "missing-function-docstring",
-  "missing-module-docstring",
 ]
 
 [tool.pylint.reports]
@@ -308,61 +283,6 @@ in-place = true
 recursive = true
 wrap-summaries = 99
 wrap-descriptions = 99
-
-[tool.pytest.ini_options]
-addopts = "--junit-xml=pytest_junit_report.xml --doctest-modules --doctest-ignore-import-errors --doctest-continue-on-failure"
-console_output_style = "count"
-
-[tool.coverage.run]
-branch = true
-command_line = "--module pytest"
-data_file = "coverage_data"
-include = [
-  "src/**/*.py",
-]
-omit = [
-  "**/tests/*.py",
-]
-
-[tool.coverage.report]
-fail_under = 85
-include = [
-  "src/**/*.py",
-]
-omit = [
-  "**/tests/*.py",
-]
-precision = 2
-exclude_lines = [
-  "pragma: no cover",
-  "if __name__ == .__main__.:",
-  "if typing.TYPE_CHECKING:",
-]
-
-[tool.coverage.html]
-directory = "coverage_html_report"
-
-[tool.coverage.xml]
-output = "coverage_xml_report.xml"
-
-[tool.mypy]
-files = [
-  "src",
-]
-exclude = [
-  "conftest",
-  "test_",
-]
-strict = true
-
-[tool.pyright]
-include = [
-  "src",
-]
-exclude = [
-  "**/tests/*.py",
-]
-pythonVersion = "3.11"
 
 [tool.autoflake]
 in-place = true
@@ -377,11 +297,21 @@ remove-unused-variables = true
 fail-under = 85
 ignore-init-method = true
 
-[tool.pydocstyle]
-convention = "numpy"
-
 [tool.vulture]
 min_confidence = 100
 paths = [
   "src",
+]
+
+[tool.numpydoc_validation]
+checks = [
+  "all",
+  "GL01",
+  "ES01",
+  "PR08",
+  "PR09",
+  "RT04",
+  "RT05",
+  "SA01",
+  "EX01",
 ]

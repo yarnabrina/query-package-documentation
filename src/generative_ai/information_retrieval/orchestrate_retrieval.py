@@ -1,3 +1,5 @@
+"""Define functionalities to orchestrate information retrieval."""
+
 import pathlib
 
 import pydantic
@@ -23,6 +25,18 @@ from .utils_retrieval import (
 
 
 def load_source_documents(file_path: pathlib.Path) -> list[Document]:
+    """Load and partition source documents.
+
+    Parameters
+    ----------
+    file_path : pathlib.Path
+        path storing JSON dataset
+
+    Returns
+    -------
+    list[Document]
+        partitioned source documents
+    """
     raw_documents = load_json_documents(file_path)
     partitioned_documents = partition_documents(raw_documents)
 
@@ -32,6 +46,22 @@ def load_source_documents(file_path: pathlib.Path) -> list[Document]:
 def create_embedding_database(
     embedding_model: str, directory_path: pathlib.Path, source_documents: list[Document]
 ) -> ValidatedChroma:
+    """Prepare an embedding database.
+
+    Parameters
+    ----------
+    embedding_model : str
+        name of Sentence Transformers model from Hugging Face
+    directory_path : pathlib.Path
+        path to directory for storing vector store
+    source_documents : list[Document]
+        partitioned source documents
+
+    Returns
+    -------
+    Chroma
+        vector store
+    """
     document_embedder = create_document_embedder(embedding_model)
 
     vector_store = create_vector_store(document_embedder, directory_path)
@@ -41,10 +71,35 @@ def create_embedding_database(
 
 
 def store_embedding_database(vector_store: ValidatedChroma) -> None:
+    """Dump vector store to disk into configured directory.
+
+    Parameters
+    ----------
+    vector_store : Chroma
+        vector store
+    """
     vector_store.persist()
 
 
 def load_embedding_database(embedding_model: str, directory_path: pathlib.Path) -> ValidatedChroma:
+    """Load vector store from disk from configured directory.
+
+    Parameters
+    ----------
+    embedding_model : str
+        name of Sentence Transformers model from Hugging Face
+    directory_path : pathlib.Path
+        path to load vector store from
+
+    Returns
+    -------
+    Chroma
+        vector store
+
+    Notes
+    -----
+    * ``embedding_model`` must match the one originally used for database creation.
+    """
     document_embedder = create_document_embedder(embedding_model)
 
     vector_store = create_vector_store(document_embedder, directory_path)
@@ -61,6 +116,33 @@ def configure_language_model(  # noqa: PLR0913
     quantised_model_file: str,
     quantised_model_type: str,
 ) -> LanguageModel:
+    """Prepare configurations to load language model.
+
+    Parameters
+    ----------
+    language_model_type : TransformerType
+        kind of language model
+    standard_pipeline_type : PipelineType
+        kind of Hugging Face pipeline
+    standard_model_name : str
+        name of ``transformers`` compatible Hugging Face model
+    quantised_model_name : str
+        name of ``ctransformers`` compatible Hugging Face model
+    quantised_model_file : str
+        named of quantised model file
+    quantised_model_type : str
+        type of quantised model
+
+    Returns
+    -------
+    LanguageModel
+        configurations of language model
+
+    Raises
+    ------
+    ValueError
+        if language model type is not supported
+    """
     language_model: dict = {"language_model_type": language_model_type}
 
     match language_model_type:
@@ -93,6 +175,28 @@ def prepare_question_answer_chain(  # noqa: PLR0913
     diversity_level: float,
     language_model: LanguageModel,
 ) -> RunnableSerializable:
+    """Prepare a question answering pipeline.
+
+    Parameters
+    ----------
+    embedding_database : Chroma
+        vector store
+    search_type : RetrievalType
+        kind of retrieval algorithm for searching vector store
+    number_of_documents : int
+        number of documents to retrieve
+    initial_number_of_documents : int
+        initial number of documents to consider
+    diversity_level : float
+        similarity between retrieved documents
+    language_model : LanguageModel
+        configurations of language model
+
+    Returns
+    -------
+    RunnableSerializable
+        question answering pipeline
+    """
     database_retriever = create_database_retriever(
         embedding_database,
         search_type,
@@ -110,6 +214,22 @@ def prepare_question_answer_chain(  # noqa: PLR0913
 def run_question_answer_chain(
     question_answer_chain: RunnableSerializable, question: str
 ) -> tuple[dict, CaptureDetailsCallback]:
+    """Run question answering pipeline for user input.
+
+    Parameters
+    ----------
+    question_answer_chain : RunnableSerializable
+        question answering pipeline
+    question : str
+        query from user
+
+    Returns
+    -------
+    dict
+        response from large language model
+    CaptureDetailsCallback
+        callback capturing details of particular run of question answering pipeline
+    """
     details_callback = CaptureDetailsCallback()
     answer = question_answer_chain.invoke(question, config={"callbacks": [details_callback]})
 

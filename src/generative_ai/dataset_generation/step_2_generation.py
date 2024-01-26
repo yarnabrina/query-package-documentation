@@ -1,3 +1,5 @@
+"""Define functionalities to generate retrieval and tuning sources."""
+
 import inspect
 import logging
 import random
@@ -11,17 +13,77 @@ from .utils_generation import (
     FunctionDetails,
     MemberDetails,
     MemberType,
-    Module,
-    Package,
+    ModuleDetails,
+    PackageDetails,
+    SplitName,
+    SplitProportions,
 )
 
 random.seed(a=0)
 
 LOGGER = logging.getLogger(__name__)
 
+DEFAULT_SPLIT_PROPORTIONS = SplitProportions(
+    train_proportion=0.6, validation_proportion=0.2, test_proportion=0.2
+)
+
+
+@pydantic.validate_call(validate_return=True)
+def allocate_tuning_pairs(
+    tuning_pairs: list[tuple[str, str]],
+    split_proportions: SplitProportions = DEFAULT_SPLIT_PROPORTIONS,
+) -> list[tuple[str, str, SplitName]]:
+    """Allocate tuning pairs to different splits.
+
+    Parameters
+    ----------
+    tuning_pairs : list[tuple[str, str]]
+        question and answer pairs to be allocated to different splits
+    split_proportions : SplitProportions, optional
+        chance of a pair to be allocated to different splits, by default DEFAULT_SPLIT_PROPORTIONS
+
+    Returns
+    -------
+    list[tuple[str, str, SplitName]]
+        updated tuning pairs with split allocation
+    """
+    allocations = random.choices(  # noqa: S311
+        [SplitName.TRAIN, SplitName.VALIDATION, SplitName.TEST],
+        weights=[
+            split_proportions.train_proportion,
+            split_proportions.validation_proportion,
+            split_proportions.test_proportion,
+        ],
+        k=len(tuning_pairs),
+    )
+
+    return [
+        (question, answer, allocation)
+        for (question, answer), allocation in zip(tuning_pairs, allocations, strict=True)
+    ]
+
 
 @pydantic.validate_call(validate_return=True)
 def enumerate_array_elements(array: list, attribute: str | None = None) -> str:
+    """Store all members of ``array``, or a common property of them.
+
+    Parameters
+    ----------
+    array : list
+        original objects whose elements (or their property) are to be stored
+    attribute : str | None, optional
+        name of common property of ``array`` elements that need to be stored, by default None
+
+    Returns
+    -------
+    str
+        concatenated string with all elements of ``array`` (or their property) in a numbered list
+
+    Raises
+    ------
+    ValueError
+        if elements of ``array`` are not strings and ``attribute`` is missing
+    """
     elements = []
     for element in array:
         if isinstance(element, str):
@@ -37,14 +99,26 @@ def enumerate_array_elements(array: list, attribute: str | None = None) -> str:
 
 
 @pydantic.validate_call(validate_return=True)
-def generate_package_dataset(package_contents: Package) -> Dataset:  # noqa: PLR0915
+def generate_package_dataset(package_contents: PackageDetails) -> Dataset:  # noqa: PLR0915
+    """Create relevant question and answers based on package details.
+
+    Parameters
+    ----------
+    package_contents : PackageDetails
+        details of a python package
+
+    Returns
+    -------
+    Dataset
+        all documents for retrieval and tuning for querying package documentation
+    """
     package_name = package_contents.package_name
     package_full_name = package_contents.package_qualified_name
 
     package = f"'{package_name}' package"
 
     package_retrieval_chunks: list[str] = [f"'{package_name}' is a Python package."]
-    package_tuning_pairs: list[tuple[str, str]] = []
+    package_tuning_pairs: list[tuple[str, str, SplitName]] = []
 
     if (parent_package := package_contents.parent_package_name) is None:
         root_package_pairs = [
@@ -71,7 +145,7 @@ def generate_package_dataset(package_contents: Package) -> Dataset:  # noqa: PLR
             ),
         ]
         package_retrieval_chunks.append(f"'{package_name}' is the root package.")
-        package_tuning_pairs.extend(root_package_pairs)
+        package_tuning_pairs.extend(allocate_tuning_pairs(root_package_pairs))
 
         parent_package_pairs = [
             (
@@ -102,7 +176,7 @@ def generate_package_dataset(package_contents: Package) -> Dataset:  # noqa: PLR
             ),
         ]
         package_retrieval_chunks.append(f"'{package_name}' has no parent package.")
-        package_tuning_pairs.extend(parent_package_pairs)
+        package_tuning_pairs.extend(allocate_tuning_pairs(parent_package_pairs))
     else:
         parent_package_pairs = [
             (
@@ -133,7 +207,7 @@ def generate_package_dataset(package_contents: Package) -> Dataset:  # noqa: PLR
         package_retrieval_chunks.append(
             f"'{package_name}' is part of parent package '{parent_package}'."
         )
-        package_tuning_pairs.extend(parent_package_pairs)
+        package_tuning_pairs.extend(allocate_tuning_pairs(parent_package_pairs))
 
         package_full_name_pairs = [
             (
@@ -164,7 +238,7 @@ def generate_package_dataset(package_contents: Package) -> Dataset:  # noqa: PLR
         package_retrieval_chunks.append(
             f"Full name of '{package_name}' sub-package is '{package_full_name}'."
         )
-        package_tuning_pairs.extend(package_full_name_pairs)
+        package_tuning_pairs.extend(allocate_tuning_pairs(package_full_name_pairs))
 
         package_hierarchy = enumerate_array_elements(package_contents.package_hierarchy)
         package_hierarchy_pairs = [
@@ -196,7 +270,7 @@ def generate_package_dataset(package_contents: Package) -> Dataset:  # noqa: PLR
         package_retrieval_chunks.append(
             f"Hierarchy of {package} is as follows: {package_hierarchy}."
         )
-        package_tuning_pairs.extend(package_hierarchy_pairs)
+        package_tuning_pairs.extend(allocate_tuning_pairs(package_hierarchy_pairs))
 
     if not (children_sub_packages := package_contents.children_sub_packages_names):
         package_sub_package_pairs = [
@@ -226,7 +300,7 @@ def generate_package_dataset(package_contents: Package) -> Dataset:  # noqa: PLR
             ),
         ]
         package_retrieval_chunks.append(f"{package} does not have any further sub-packages.")
-        package_tuning_pairs.extend(package_sub_package_pairs)
+        package_tuning_pairs.extend(allocate_tuning_pairs(package_sub_package_pairs))
     else:
         children_sub_packages_count = len(children_sub_packages)
         children_sub_packages_count_pairs = [
@@ -258,7 +332,7 @@ def generate_package_dataset(package_contents: Package) -> Dataset:  # noqa: PLR
         package_retrieval_chunks.append(
             f"{package} has {children_sub_packages_count} many sub-packages."
         )
-        package_tuning_pairs.extend(children_sub_packages_count_pairs)
+        package_tuning_pairs.extend(allocate_tuning_pairs(children_sub_packages_count_pairs))
 
         package_sub_packages = enumerate_array_elements(children_sub_packages)
         package_sub_package_pairs = [
@@ -290,7 +364,7 @@ def generate_package_dataset(package_contents: Package) -> Dataset:  # noqa: PLR
         package_retrieval_chunks.append(
             f"Sub-packages of {package} are as follows: {package_sub_packages}."
         )
-        package_tuning_pairs.extend(package_sub_package_pairs)
+        package_tuning_pairs.extend(allocate_tuning_pairs(package_sub_package_pairs))
 
     if not (children_modules := package_contents.children_modules_names):
         package_module_pairs = [
@@ -320,7 +394,7 @@ def generate_package_dataset(package_contents: Package) -> Dataset:  # noqa: PLR
             ),
         ]
         package_retrieval_chunks.append(f"{package} does not have any further modules.")
-        package_tuning_pairs.extend(package_module_pairs)
+        package_tuning_pairs.extend(allocate_tuning_pairs(package_module_pairs))
     else:
         children_modules_count = len(children_modules)
         children_modules_count_pairs = [
@@ -350,7 +424,7 @@ def generate_package_dataset(package_contents: Package) -> Dataset:  # noqa: PLR
             ),
         ]
         package_retrieval_chunks.append(f"{package} has {children_modules_count} many modules.")
-        package_tuning_pairs.extend(children_modules_count_pairs)
+        package_tuning_pairs.extend(allocate_tuning_pairs(children_modules_count_pairs))
 
         package_modules = enumerate_array_elements(children_modules)
         package_module_pairs = [
@@ -380,7 +454,7 @@ def generate_package_dataset(package_contents: Package) -> Dataset:  # noqa: PLR
             ),
         ]
         package_retrieval_chunks.append(f"Modules of {package} are as follows: {package_modules}.")
-        package_tuning_pairs.extend(package_module_pairs)
+        package_tuning_pairs.extend(allocate_tuning_pairs(package_module_pairs))
 
     if not (package_summary := package_contents.package_summary):
         package_summary_pairs = [
@@ -409,7 +483,7 @@ def generate_package_dataset(package_contents: Package) -> Dataset:  # noqa: PLR
         package_retrieval_chunks.append(
             f"Unfortunately, {package} currently does not have any documentation."
         )
-        package_tuning_pairs.extend(package_summary_pairs)
+        package_tuning_pairs.extend(allocate_tuning_pairs(package_summary_pairs))
     else:
         package_summary_pairs = [
             (f"What does {package} do?", f"Its documentation is as follows: '{package_summary}'."),
@@ -437,7 +511,7 @@ def generate_package_dataset(package_contents: Package) -> Dataset:  # noqa: PLR
         package_retrieval_chunks.append(
             f"The following is the documentation of {package}: '{package_summary}'."
         )
-        package_tuning_pairs.extend(package_summary_pairs)
+        package_tuning_pairs.extend(allocate_tuning_pairs(package_summary_pairs))
 
     if not (package_exports := package_contents.package_all_exports):
         package_members_pairs = [
@@ -472,7 +546,7 @@ def generate_package_dataset(package_contents: Package) -> Dataset:  # noqa: PLR
         package_retrieval_chunks.append(
             f"{package} does not export anything publicly using __all__ variable."
         )
-        package_tuning_pairs.extend(package_members_pairs)
+        package_tuning_pairs.extend(allocate_tuning_pairs(package_members_pairs))
     else:
         package_exports_count = len(package_exports)
         package_exports_count_pairs = [
@@ -504,7 +578,7 @@ def generate_package_dataset(package_contents: Package) -> Dataset:  # noqa: PLR
         package_retrieval_chunks.append(
             f"{package} has {package_exports_count} many public exports."
         )
-        package_tuning_pairs.extend(package_exports_count_pairs)
+        package_tuning_pairs.extend(allocate_tuning_pairs(package_exports_count_pairs))
 
         package_public_members = enumerate_array_elements(package_exports)
         package_members_pairs = [
@@ -537,7 +611,7 @@ def generate_package_dataset(package_contents: Package) -> Dataset:  # noqa: PLR
         package_retrieval_chunks.append(
             f"{package} exports following public members using __all__: {package_public_members}."
         )
-        package_tuning_pairs.extend(package_members_pairs)
+        package_tuning_pairs.extend(allocate_tuning_pairs(package_members_pairs))
 
     package_dataset = Dataset(
         retrieval_chunks=package_retrieval_chunks, tuning_pairs=package_tuning_pairs
@@ -547,44 +621,56 @@ def generate_package_dataset(package_contents: Package) -> Dataset:  # noqa: PLR
 
 
 @pydantic.validate_call(validate_return=True)
-def generate_module_dataset(module_members: Module) -> Dataset:
-    module_name = module_members.module_name
-    module_full_name = module_members.module_qualified_name
+def generate_module_dataset(module_contents: ModuleDetails) -> Dataset:
+    """Create relevant question and answers based on module details.
+
+    Parameters
+    ----------
+    module_contents : ModuleDetails
+        details of a python module
+
+    Returns
+    -------
+    Dataset
+        all documents for retrieval and tuning for querying module documentation
+    """
+    module_name = module_contents.module_name
+    module_full_name = module_contents.module_qualified_name
     module = f"'{module_name}' module"
 
     module_retrieval_chunks: list[str] = [f"'{module_name}' is a Python module."]
-    module_tuning_pairs: list[tuple[str, str]] = []
+    module_tuning_pairs: list[tuple[str, str, SplitName]] = []
 
     module_package_pairs = [
         (
             f"Can you tell the the parent package of {module}?",
-            f"'{module_members.package_name}' is the parent package of {module}.",
+            f"'{module_contents.package_name}' is the parent package of {module}.",
         ),
         (
             f"What is the parent package of the {module}?",
-            f"The parent package of {module} is '{module_members.package_name}'.",
+            f"The parent package of {module} is '{module_contents.package_name}'.",
         ),
         (
             f"I'm trying to find the parent package of the {module}. Can you help?",
-            f"Sure, parent package of {module} is '{module_members.package_name}'.",
+            f"Sure, parent package of {module} is '{module_contents.package_name}'.",
         ),
         (
             f"Could you inform me about the parent package of the {module}?",
-            f"Certainly, '{module_members.package_name}' is the parent package of the {module}.",
+            f"Certainly, '{module_contents.package_name}' is the parent package of the {module}.",
         ),
         (
             f"I need to know the parent package of {module}. Can you provide that information?",
-            f"Absolutely, the parent package of the {module} is '{module_members.package_name}'.",
+            f"Absolutely, the parent package of the {module} is '{module_contents.package_name}'.",
         ),
         (
             f"Can you identify the parent package for the {module}?",
-            f"Yes, parent package for {module} is '{module_members.package_name}'.",
+            f"Yes, parent package for {module} is '{module_contents.package_name}'.",
         ),
     ]
     module_retrieval_chunks.append(
-        f"{module} is part of parent package '{module_members.package_name}'."
+        f"{module} is part of parent package '{module_contents.package_name}'."
     )
-    module_tuning_pairs.extend(module_package_pairs)
+    module_tuning_pairs.extend(allocate_tuning_pairs(module_package_pairs))
 
     module_full_name_pairs = [
         (
@@ -613,9 +699,9 @@ def generate_module_dataset(module_members: Module) -> Dataset:
         ),
     ]
     module_retrieval_chunks.append(f"Full name of {module} is '{module_full_name}'.")
-    module_tuning_pairs.extend(module_full_name_pairs)
+    module_tuning_pairs.extend(allocate_tuning_pairs(module_full_name_pairs))
 
-    module_hierarchy = enumerate_array_elements(module_members.module_hierarchy)
+    module_hierarchy = enumerate_array_elements(module_contents.module_hierarchy)
     module_hierarchy_pairs = [
         (
             f"What is the hierarchy of {module}?",
@@ -643,9 +729,9 @@ def generate_module_dataset(module_members: Module) -> Dataset:
         ),
     ]
     module_retrieval_chunks.append(f"Hierarchy of {module} is as follows: {module_hierarchy}.")
-    module_tuning_pairs.extend(module_hierarchy_pairs)
+    module_tuning_pairs.extend(allocate_tuning_pairs(module_hierarchy_pairs))
 
-    module_members_count = len(module_members.module_members)
+    module_members_count = len(module_contents.module_members)
     module_members_count_pairs = [
         (
             f"How many members does {module} have?",
@@ -673,10 +759,10 @@ def generate_module_dataset(module_members: Module) -> Dataset:
         ),
     ]
     module_retrieval_chunks.append(f"{module} has {module_members_count} many members.")
-    module_tuning_pairs.extend(module_members_count_pairs)
+    module_tuning_pairs.extend(allocate_tuning_pairs(module_members_count_pairs))
 
     module_member_names = enumerate_array_elements(
-        module_members.module_members, attribute="member_name"
+        module_contents.module_members, attribute="member_name"
     )
     module_members_pairs = [
         (
@@ -705,9 +791,9 @@ def generate_module_dataset(module_members: Module) -> Dataset:
         ),
     ]
     module_retrieval_chunks.append(f"Members of {module} are as follows: {module_member_names}.")
-    module_tuning_pairs.extend(module_members_pairs)
+    module_tuning_pairs.extend(allocate_tuning_pairs(module_members_pairs))
 
-    if not (module_summary := module_members.module_summary):
+    if not (module_summary := module_contents.module_summary):
         module_summary_pairs = [
             (f"What is the {module} for?", f"{module} does not have any documentation."),
             (
@@ -727,7 +813,7 @@ def generate_module_dataset(module_members: Module) -> Dataset:
         module_retrieval_chunks.append(
             f"Unfortunately, {module} currently does not have any documentation."
         )
-        module_tuning_pairs.extend(module_summary_pairs)
+        module_tuning_pairs.extend(allocate_tuning_pairs(module_summary_pairs))
     else:
         module_summary_pairs = [
             (
@@ -758,9 +844,9 @@ def generate_module_dataset(module_members: Module) -> Dataset:
         module_retrieval_chunks.append(
             f"The following is the documentation of {module}: {module_summary}."
         )
-        module_tuning_pairs.extend(module_summary_pairs)
+        module_tuning_pairs.extend(allocate_tuning_pairs(module_summary_pairs))
 
-    if not (module_exports := module_members.module_all_exports):
+    if not (module_exports := module_contents.module_all_exports):
         module_exports_pairs = [
             (
                 f"Tell me the public members of the {module}.",
@@ -790,7 +876,7 @@ def generate_module_dataset(module_members: Module) -> Dataset:
         module_retrieval_chunks.append(
             f"{module} does not export anything publicly using __all__ variable."
         )
-        module_tuning_pairs.extend(module_exports_pairs)
+        module_tuning_pairs.extend(allocate_tuning_pairs(module_exports_pairs))
     else:
         module_exports_count = len(module_exports)
         module_exports_count_pairs = [
@@ -820,7 +906,7 @@ def generate_module_dataset(module_members: Module) -> Dataset:
             ),
         ]
         module_retrieval_chunks.append(f"{module} has {module_exports_count} many public exports.")
-        module_tuning_pairs.extend(module_exports_count_pairs)
+        module_tuning_pairs.extend(allocate_tuning_pairs(module_exports_count_pairs))
 
         module_public_exports = enumerate_array_elements(module_exports)
         module_exports_pairs = [
@@ -853,7 +939,7 @@ def generate_module_dataset(module_members: Module) -> Dataset:
         module_retrieval_chunks.append(
             f"{module} exports following members using __all__: {module_public_exports}."
         )
-        module_tuning_pairs.extend(module_exports_pairs)
+        module_tuning_pairs.extend(allocate_tuning_pairs(module_exports_pairs))
 
     module_dataset = Dataset(
         retrieval_chunks=module_retrieval_chunks, tuning_pairs=module_tuning_pairs
@@ -866,11 +952,29 @@ def generate_module_dataset(module_members: Module) -> Dataset:
 def generate_enum_member_dataset(
     enum_member: str, enum_docstring: str, member_type_details: EnumDetails
 ) -> tuple[Dataset, list[str]]:
+    """Create relevant question and answers based on enum member details.
+
+    Parameters
+    ----------
+    enum_member : str
+        name of the enum member
+    enum_docstring : str
+        ``__doc__`` attribute of the enum member, if any
+    member_type_details : EnumDetails
+        details of the enum member
+
+    Returns
+    -------
+    Dataset
+        all documents for retrieval and tuning for querying enum member documentation
+    list[str]
+        only retrieval documents
+    """
     enum_member_retrieval_chunks: list[str] = [
         f"{enum_member} is a Python enum.",
         f"{enum_member} has following docstring: {enum_docstring}.",
     ]
-    enum_member_tuning_pairs: list[tuple[str, str]] = []
+    enum_member_tuning_pairs: list[tuple[str, str, SplitName]] = []
 
     enum_member_count = len(member_type_details.enum_members)
     enum_member_count_pairs = [
@@ -900,7 +1004,7 @@ def generate_enum_member_dataset(
         ),
     ]
     enum_member_retrieval_chunks.insert(-1, f"{enum_member} has {enum_member_count} many members.")
-    enum_member_tuning_pairs.extend(enum_member_count_pairs)
+    enum_member_tuning_pairs.extend(allocate_tuning_pairs(enum_member_count_pairs))
 
     enum_members = enumerate_array_elements(
         member_type_details.enum_members, attribute="enum_member"
@@ -930,7 +1034,7 @@ def generate_enum_member_dataset(
     enum_member_retrieval_chunks.insert(
         -1, f"Members of {enum_member} are as follows: {enum_members}."
     )
-    enum_member_tuning_pairs.extend(enum_members_pairs)
+    enum_member_tuning_pairs.extend(allocate_tuning_pairs(enum_members_pairs))
 
     enum_member_names = enumerate_array_elements(
         member_type_details.enum_members, attribute="enum_member_name"
@@ -965,7 +1069,7 @@ def generate_enum_member_dataset(
     enum_member_retrieval_chunks.insert(
         -1, f"Names of different members of {enum_member} are as follows: {enum_member_names}."
     )
-    enum_member_tuning_pairs.extend(enum_member_names_pairs)
+    enum_member_tuning_pairs.extend(allocate_tuning_pairs(enum_member_names_pairs))
 
     enum_member_values = enumerate_array_elements(
         member_type_details.enum_members, attribute="enum_member_value"
@@ -999,7 +1103,7 @@ def generate_enum_member_dataset(
     enum_member_retrieval_chunks.insert(
         -1, f"Values of different members of {enum_member} are as follows: {enum_member_values}."
     )
-    enum_member_tuning_pairs.extend(enum_member_values_pairs)
+    enum_member_tuning_pairs.extend(allocate_tuning_pairs(enum_member_values_pairs))
 
     enum_member_dataset = Dataset(
         retrieval_chunks=enum_member_retrieval_chunks, tuning_pairs=enum_member_tuning_pairs
@@ -1012,11 +1116,29 @@ def generate_enum_member_dataset(
 def generate_class_member_dataset(  # noqa: C901, PLR0912, PLR0915
     class_member: str, class_docstring: str, member_type_details: ClassDetails
 ) -> tuple[Dataset, list[str]]:
+    """Create relevant question and answers based on class member details.
+
+    Parameters
+    ----------
+    class_member : str
+        name of the class member
+    class_docstring : str
+        ``__doc__`` attribute of the class member, if any
+    member_type_details : ClassDetails
+        details of the class member
+
+    Returns
+    -------
+    Dataset
+        all documents for retrieval and tuning for querying class member documentation
+    list[str]
+        only retrieval documents
+    """
     class_member_retrieval_chunks: list[str] = [
         f"{class_member} is a Python class.",
         f"{class_member} has following docstring: {class_docstring}.",
     ]
-    class_member_tuning_pairs: list[tuple[str, str]] = []
+    class_member_tuning_pairs: list[tuple[str, str, SplitName]] = []
 
     if not (class_parameters := member_type_details.class_parameters):
         class_parameters_pairs = [
@@ -1049,7 +1171,7 @@ def generate_class_member_dataset(  # noqa: C901, PLR0912, PLR0915
         class_member_retrieval_chunks.append(
             f"{class_member} requires no arguments for instantiation."
         )
-        class_member_tuning_pairs.extend(class_parameters_pairs)
+        class_member_tuning_pairs.extend(allocate_tuning_pairs(class_parameters_pairs))
     else:
         class_parameter_names = enumerate_array_elements(
             class_parameters, attribute="parameter_details"
@@ -1084,7 +1206,7 @@ def generate_class_member_dataset(  # noqa: C901, PLR0912, PLR0915
             f"{class_member} requires the following arguments for initialisation:"
             f" {class_parameter_names}"
         )
-        class_member_tuning_pairs.extend(class_parameters_pairs)
+        class_member_tuning_pairs.extend(allocate_tuning_pairs(class_parameters_pairs))
 
     for class_parameter in class_parameters:
         parameter_name = class_parameter.parameter_name
@@ -1118,7 +1240,7 @@ def generate_class_member_dataset(  # noqa: C901, PLR0912, PLR0915
                 ),
             ]
             class_member_retrieval_chunks.append(f"{parameter} does not have a default value.")
-            class_member_tuning_pairs.extend(class_parameter_defaults_pairs)
+            class_member_tuning_pairs.extend(allocate_tuning_pairs(class_parameter_defaults_pairs))
         else:
             class_parameter_defaults_pairs = [
                 (
@@ -1149,7 +1271,7 @@ def generate_class_member_dataset(  # noqa: C901, PLR0912, PLR0915
             class_member_retrieval_chunks.append(
                 f"{parameter_default} is the default value of {parameter}."
             )
-            class_member_tuning_pairs.extend(class_parameter_defaults_pairs)
+            class_member_tuning_pairs.extend(allocate_tuning_pairs(class_parameter_defaults_pairs))
 
         if (parameter_annotation := class_parameter.parameter_annotation) is inspect._empty:
             class_parameter_types_pairs = [
@@ -1179,7 +1301,7 @@ def generate_class_member_dataset(  # noqa: C901, PLR0912, PLR0915
                 ),
             ]
             class_member_retrieval_chunks.append(f"Type hint for {parameter} is unavailable.")
-            class_member_tuning_pairs.extend(class_parameter_types_pairs)
+            class_member_tuning_pairs.extend(allocate_tuning_pairs(class_parameter_types_pairs))
         else:
             class_parameter_types_pairs = [
                 (
@@ -1210,7 +1332,7 @@ def generate_class_member_dataset(  # noqa: C901, PLR0912, PLR0915
             class_member_retrieval_chunks.append(
                 f"{parameter} is annotated as '{parameter_annotation}' type."
             )
-            class_member_tuning_pairs.extend(class_parameter_types_pairs)
+            class_member_tuning_pairs.extend(allocate_tuning_pairs(class_parameter_types_pairs))
 
         if not (parameter_summary := class_parameter.parameter_summary):
             class_parameter_summary_pairs = [
@@ -1247,7 +1369,7 @@ def generate_class_member_dataset(  # noqa: C901, PLR0912, PLR0915
             class_member_retrieval_chunks.append(
                 f"{parameter} lacks any documentation in the docstring."
             )
-            class_member_tuning_pairs.extend(class_parameter_summary_pairs)
+            class_member_tuning_pairs.extend(allocate_tuning_pairs(class_parameter_summary_pairs))
         else:
             class_parameter_summary_pairs = [
                 (
@@ -1283,7 +1405,7 @@ def generate_class_member_dataset(  # noqa: C901, PLR0912, PLR0915
             class_member_retrieval_chunks.append(
                 f"As per docstring, role of {parameter} is: '{parameter_summary}'."
             )
-            class_member_tuning_pairs.extend(class_parameter_summary_pairs)
+            class_member_tuning_pairs.extend(allocate_tuning_pairs(class_parameter_summary_pairs))
 
     if not (class_methods := member_type_details.class_methods):
         class_method_names_pairs = [
@@ -1315,7 +1437,7 @@ def generate_class_member_dataset(  # noqa: C901, PLR0912, PLR0915
         class_member_retrieval_chunks.append(
             f"{class_member} has no public (without _ as the prefix) methods."
         )
-        class_member_tuning_pairs.extend(class_method_names_pairs)
+        class_member_tuning_pairs.extend(allocate_tuning_pairs(class_method_names_pairs))
     else:
         class_methods_count = len(class_methods)
         class_methods_count_pairs = [
@@ -1347,7 +1469,7 @@ def generate_class_member_dataset(  # noqa: C901, PLR0912, PLR0915
         class_member_retrieval_chunks.append(
             f"{class_member} has {class_methods_count} many public methods."
         )
-        class_member_tuning_pairs.extend(class_methods_count_pairs)
+        class_member_tuning_pairs.extend(allocate_tuning_pairs(class_methods_count_pairs))
 
         class_public_methods = enumerate_array_elements(class_methods, attribute="method_name")
         class_method_names_pairs = [
@@ -1384,7 +1506,7 @@ def generate_class_member_dataset(  # noqa: C901, PLR0912, PLR0915
         class_member_retrieval_chunks.append(
             f"{class_member} has the following public methods: {class_public_methods}"
         )
-        class_member_tuning_pairs.extend(class_method_names_pairs)
+        class_member_tuning_pairs.extend(allocate_tuning_pairs(class_method_names_pairs))
 
     for class_method in class_methods:
         method_name = class_method.method_name
@@ -1415,7 +1537,7 @@ def generate_class_member_dataset(  # noqa: C901, PLR0912, PLR0915
                 ),
             ]
             class_member_retrieval_chunks.append(f"{method} takes no arguments.")
-            class_member_tuning_pairs.extend(class_method_parameters_pairs)
+            class_member_tuning_pairs.extend(allocate_tuning_pairs(class_method_parameters_pairs))
         else:
             class_method_parameters = enumerate_array_elements(method_parameters)
             class_method_parameters_pairs = [
@@ -1443,7 +1565,7 @@ def generate_class_member_dataset(  # noqa: C901, PLR0912, PLR0915
             class_member_retrieval_chunks.append(
                 f"{method} accepts following parameters: {class_method_parameters}"
             )
-            class_member_tuning_pairs.extend(class_method_parameters_pairs)
+            class_member_tuning_pairs.extend(allocate_tuning_pairs(class_method_parameters_pairs))
 
         if not (method_summary := class_method.method_summary):
             class_method_summary_pairs = [
@@ -1467,7 +1589,7 @@ def generate_class_member_dataset(  # noqa: C901, PLR0912, PLR0915
                 (f"What's the purpose of {method}?", f"The {method} doesn't have a docstring."),
             ]
             class_member_retrieval_chunks.append(f"Unfortunately, {method} is not documented.")
-            class_member_tuning_pairs.extend(class_method_summary_pairs)
+            class_member_tuning_pairs.extend(allocate_tuning_pairs(class_method_summary_pairs))
         else:
             class_method_summary_pairs = [
                 (
@@ -1500,7 +1622,7 @@ def generate_class_member_dataset(  # noqa: C901, PLR0912, PLR0915
             class_member_retrieval_chunks.append(
                 f"Based on docstring, {method} has the purpose of '{method_summary}'."
             )
-            class_member_tuning_pairs.extend(class_method_summary_pairs)
+            class_member_tuning_pairs.extend(allocate_tuning_pairs(class_method_summary_pairs))
 
     if not (class_attributes := member_type_details.class_attributes):
         class_attribute_names_pairs = [
@@ -1526,7 +1648,7 @@ def generate_class_member_dataset(  # noqa: C901, PLR0912, PLR0915
             ),
         ]
         class_member_retrieval_chunks.append(f"{class_member} has no public attributes.")
-        class_member_tuning_pairs.extend(class_attribute_names_pairs)
+        class_member_tuning_pairs.extend(allocate_tuning_pairs(class_attribute_names_pairs))
     else:
         class_attributes_count = len(class_attributes)
         class_attributes_count_pairs = [
@@ -1559,7 +1681,7 @@ def generate_class_member_dataset(  # noqa: C901, PLR0912, PLR0915
         class_member_retrieval_chunks.append(
             f"{class_member} has {class_attributes_count} many public attributes."
         )
-        class_member_tuning_pairs.extend(class_attributes_count_pairs)
+        class_member_tuning_pairs.extend(allocate_tuning_pairs(class_attributes_count_pairs))
 
         class_public_attributes = enumerate_array_elements(
             class_attributes, attribute="attribute_name"
@@ -1592,7 +1714,7 @@ def generate_class_member_dataset(  # noqa: C901, PLR0912, PLR0915
         class_member_retrieval_chunks.append(
             f"{class_member} has following public attributes: {class_public_attributes}"
         )
-        class_member_tuning_pairs.extend(class_attribute_names_pairs)
+        class_member_tuning_pairs.extend(allocate_tuning_pairs(class_attribute_names_pairs))
 
     if not (class_summary := member_type_details.class_summary):
         class_summary_pairs = [
@@ -1621,7 +1743,7 @@ def generate_class_member_dataset(  # noqa: C901, PLR0912, PLR0915
         class_member_retrieval_chunks.append(
             f"Unfortunately, {class_member} does not document its objective."
         )
-        class_member_tuning_pairs.extend(class_summary_pairs)
+        class_member_tuning_pairs.extend(allocate_tuning_pairs(class_summary_pairs))
     else:
         class_summary_pairs = [
             (
@@ -1656,7 +1778,7 @@ def generate_class_member_dataset(  # noqa: C901, PLR0912, PLR0915
         class_member_retrieval_chunks.append(
             f"{class_member} documents its purpose as follows: '{class_summary}'."
         )
-        class_member_tuning_pairs.extend(class_summary_pairs)
+        class_member_tuning_pairs.extend(allocate_tuning_pairs(class_summary_pairs))
 
     if not (class_notes := member_type_details.class_notes):
         class_notes_pairs = [
@@ -1688,7 +1810,7 @@ def generate_class_member_dataset(  # noqa: C901, PLR0912, PLR0915
         class_member_retrieval_chunks.append(
             f"Docstring of {class_member} has contains no specific implementation details."
         )
-        class_member_tuning_pairs.extend(class_notes_pairs)
+        class_member_tuning_pairs.extend(allocate_tuning_pairs(class_notes_pairs))
     else:
         class_notes_pairs = [
             (
@@ -1723,7 +1845,7 @@ def generate_class_member_dataset(  # noqa: C901, PLR0912, PLR0915
         class_member_retrieval_chunks.append(
             f"In docstring, {class_member} specifies the following: '{class_notes}'."
         )
-        class_member_tuning_pairs.extend(class_notes_pairs)
+        class_member_tuning_pairs.extend(allocate_tuning_pairs(class_notes_pairs))
 
     class_member_dataset = Dataset(
         retrieval_chunks=class_member_retrieval_chunks[:2], tuning_pairs=class_member_tuning_pairs
@@ -1736,11 +1858,29 @@ def generate_class_member_dataset(  # noqa: C901, PLR0912, PLR0915
 def generate_function_member_dataset(  # noqa: C901, PLR0912, PLR0915
     function_member: str, function_docstring: str, member_type_details: FunctionDetails
 ) -> tuple[Dataset, list[str]]:
+    """Create relevant question and answers based on function member details.
+
+    Parameters
+    ----------
+    function_member : str
+        name of the function member
+    function_docstring : str
+        ``__doc__`` attribute of the function member, if any
+    member_type_details : FunctionDetails
+        details of the function member
+
+    Returns
+    -------
+    Dataset
+        all documents for retrieval and tuning for querying function member
+    list[str]
+        only retrieval documents
+    """
     function_member_retrieval_chunks: list[str] = [
         f"{function_member} is a Python function.",
         f"{function_member} has following docstring: {function_docstring}.",
     ]
-    function_member_tuning_pairs: list[tuple[str, str]] = []
+    function_member_tuning_pairs: list[tuple[str, str, SplitName]] = []
 
     if not (function_parameters := member_type_details.function_parameters):
         function_parameters_pairs = [
@@ -1770,7 +1910,7 @@ def generate_function_member_dataset(  # noqa: C901, PLR0912, PLR0915
             ),
         ]
         function_member_retrieval_chunks.append(f"{function_member} takes no parameters.")
-        function_member_tuning_pairs.extend(function_parameters_pairs)
+        function_member_tuning_pairs.extend(allocate_tuning_pairs(function_parameters_pairs))
     else:
         function_parameter_names = enumerate_array_elements(
             function_parameters, attribute="parameter_details"
@@ -1805,7 +1945,7 @@ def generate_function_member_dataset(  # noqa: C901, PLR0912, PLR0915
         function_member_retrieval_chunks.append(
             f"{function_member} takes the following parameters: {function_parameter_names}"
         )
-        function_member_tuning_pairs.extend(function_parameters_pairs)
+        function_member_tuning_pairs.extend(allocate_tuning_pairs(function_parameters_pairs))
 
     for function_parameter in function_parameters:
         parameter_name = function_parameter.parameter_name
@@ -1836,7 +1976,9 @@ def generate_function_member_dataset(  # noqa: C901, PLR0912, PLR0915
                 ),
             ]
             function_member_retrieval_chunks.append(f"{parameter} has no default value.")
-            function_member_tuning_pairs.extend(function_parameter_defaults_pairs)
+            function_member_tuning_pairs.extend(
+                allocate_tuning_pairs(function_parameter_defaults_pairs)
+            )
         else:
             function_parameter_defaults_pairs = [
                 (
@@ -1867,7 +2009,9 @@ def generate_function_member_dataset(  # noqa: C901, PLR0912, PLR0915
             function_member_retrieval_chunks.append(
                 f"{parameter} has the default value of {parameter_default}."
             )
-            function_member_tuning_pairs.extend(function_parameter_defaults_pairs)
+            function_member_tuning_pairs.extend(
+                allocate_tuning_pairs(function_parameter_defaults_pairs)
+            )
 
         if (parameter_annotation := function_parameter.parameter_annotation) is inspect._empty:
             function_parameter_types_pairs = [
@@ -1900,7 +2044,9 @@ def generate_function_member_dataset(  # noqa: C901, PLR0912, PLR0915
             function_member_retrieval_chunks.append(
                 f"Unfortunately, type hint for {parameter} is missing."
             )
-            function_member_tuning_pairs.extend(function_parameter_types_pairs)
+            function_member_tuning_pairs.extend(
+                allocate_tuning_pairs(function_parameter_types_pairs)
+            )
         else:
             function_parameter_types_pairs = [
                 (
@@ -1931,7 +2077,9 @@ def generate_function_member_dataset(  # noqa: C901, PLR0912, PLR0915
             function_member_retrieval_chunks.append(
                 f"{parameter} has '{parameter_annotation}' as type annotation."
             )
-            function_member_tuning_pairs.extend(function_parameter_types_pairs)
+            function_member_tuning_pairs.extend(
+                allocate_tuning_pairs(function_parameter_types_pairs)
+            )
 
         if not (parameter_summary := function_parameter.parameter_summary):
             function_parameter_summary_pairs = [
@@ -1964,7 +2112,9 @@ def generate_function_member_dataset(  # noqa: C901, PLR0912, PLR0915
             function_member_retrieval_chunks.append(
                 f"{parameter} is not documented in the docstring."
             )
-            function_member_tuning_pairs.extend(function_parameter_summary_pairs)
+            function_member_tuning_pairs.extend(
+                allocate_tuning_pairs(function_parameter_summary_pairs)
+            )
         else:
             function_parameter_summary_pairs = [
                 (
@@ -2000,7 +2150,9 @@ def generate_function_member_dataset(  # noqa: C901, PLR0912, PLR0915
             function_member_retrieval_chunks.append(
                 f"In the docstring, {parameter} is described as '{parameter_summary}'."
             )
-            function_member_tuning_pairs.extend(function_parameter_summary_pairs)
+            function_member_tuning_pairs.extend(
+                allocate_tuning_pairs(function_parameter_summary_pairs)
+            )
 
     if (
         returns_annotation := member_type_details.function_returns.returns_annotation
@@ -2039,7 +2191,7 @@ def generate_function_member_dataset(  # noqa: C901, PLR0912, PLR0915
         function_member_retrieval_chunks.append(
             f"{function_member} has no return annotation, but its return can still be non-null."
         )
-        function_member_tuning_pairs.extend(function_return_type_pairs)
+        function_member_tuning_pairs.extend(allocate_tuning_pairs(function_return_type_pairs))
     else:
         function_return_type_pairs = [
             (
@@ -2070,7 +2222,7 @@ def generate_function_member_dataset(  # noqa: C901, PLR0912, PLR0915
         function_member_retrieval_chunks.append(
             f"Return of {function_member} is annotated as '{returns_annotation}'."
         )
-        function_member_tuning_pairs.extend(function_return_type_pairs)
+        function_member_tuning_pairs.extend(allocate_tuning_pairs(function_return_type_pairs))
 
     if not (returns_summary := member_type_details.function_returns.returns_summary):
         function_return_summary_pairs = [
@@ -2100,7 +2252,7 @@ def generate_function_member_dataset(  # noqa: C901, PLR0912, PLR0915
             ),
         ]
         function_member_retrieval_chunks.append(f"{function_member} does not document its return.")
-        function_member_tuning_pairs.extend(function_return_summary_pairs)
+        function_member_tuning_pairs.extend(allocate_tuning_pairs(function_return_summary_pairs))
     else:
         function_return_summary_pairs = [
             (
@@ -2135,7 +2287,7 @@ def generate_function_member_dataset(  # noqa: C901, PLR0912, PLR0915
         function_member_retrieval_chunks.append(
             f"Based on docstring, return of {function_member} is as follows: '{returns_summary}'."
         )
-        function_member_tuning_pairs.extend(function_return_summary_pairs)
+        function_member_tuning_pairs.extend(allocate_tuning_pairs(function_return_summary_pairs))
 
     if not (function_summary := member_type_details.function_summary):
         function_summary_pairs = [
@@ -2161,7 +2313,7 @@ def generate_function_member_dataset(  # noqa: C901, PLR0912, PLR0915
             ),
         ]
         function_member_retrieval_chunks.append(f"Documentation for {function_member} is missing.")
-        function_member_tuning_pairs.extend(function_summary_pairs)
+        function_member_tuning_pairs.extend(allocate_tuning_pairs(function_summary_pairs))
     else:
         function_summary_pairs = [
             (
@@ -2194,7 +2346,7 @@ def generate_function_member_dataset(  # noqa: C901, PLR0912, PLR0915
         function_member_retrieval_chunks.append(
             f"{function_member} documents itself as follows: '{function_summary}'."
         )
-        function_member_tuning_pairs.extend(function_summary_pairs)
+        function_member_tuning_pairs.extend(allocate_tuning_pairs(function_summary_pairs))
 
     if not (function_raises := member_type_details.function_raises):
         function_raise_types_pairs = [
@@ -2229,7 +2381,7 @@ def generate_function_member_dataset(  # noqa: C901, PLR0912, PLR0915
         function_member_retrieval_chunks.append(
             f"{function_member} does not document any specific exceptions in the docstring."
         )
-        function_member_tuning_pairs.extend(function_raise_types_pairs)
+        function_member_tuning_pairs.extend(allocate_tuning_pairs(function_raise_types_pairs))
     else:
         function_raise_types = enumerate_array_elements(
             function_raises, attribute="raises_details"
@@ -2272,7 +2424,7 @@ def generate_function_member_dataset(  # noqa: C901, PLR0912, PLR0915
         function_member_retrieval_chunks.append(
             f"From docstring, {function_member} can raise the following: {function_raise_types}"
         )
-        function_member_tuning_pairs.extend(function_raise_types_pairs)
+        function_member_tuning_pairs.extend(allocate_tuning_pairs(function_raise_types_pairs))
 
     if not (function_warns := member_type_details.function_warns):
         function_warn_types_pairs = [
@@ -2309,7 +2461,7 @@ def generate_function_member_dataset(  # noqa: C901, PLR0912, PLR0915
         function_member_retrieval_chunks.append(
             f"Mention of any warnings is missing in docstring of {function_member}."
         )
-        function_member_tuning_pairs.extend(function_warn_types_pairs)
+        function_member_tuning_pairs.extend(allocate_tuning_pairs(function_warn_types_pairs))
     else:
         function_warn_types = enumerate_array_elements(function_warns, attribute="warns_details")
         function_warn_types_pairs = [
@@ -2347,7 +2499,7 @@ def generate_function_member_dataset(  # noqa: C901, PLR0912, PLR0915
         function_member_retrieval_chunks.append(
             f"{function_member} documents the following warnings: {function_warn_types}"
         )
-        function_member_tuning_pairs.extend(function_warn_types_pairs)
+        function_member_tuning_pairs.extend(allocate_tuning_pairs(function_warn_types_pairs))
 
     if not (function_notes := member_type_details.function_notes):
         function_notes_pairs = [
@@ -2379,7 +2531,7 @@ def generate_function_member_dataset(  # noqa: C901, PLR0912, PLR0915
         function_member_retrieval_chunks.append(
             f"{function_member} has no specific notes in the docstring."
         )
-        function_member_tuning_pairs.extend(function_notes_pairs)
+        function_member_tuning_pairs.extend(allocate_tuning_pairs(function_notes_pairs))
     else:
         function_notes_pairs = [
             (
@@ -2415,7 +2567,7 @@ def generate_function_member_dataset(  # noqa: C901, PLR0912, PLR0915
         function_member_retrieval_chunks.append(
             f"Docstring for {function_member} has following notes: '{function_notes}'."
         )
-        function_member_tuning_pairs.extend(function_notes_pairs)
+        function_member_tuning_pairs.extend(allocate_tuning_pairs(function_notes_pairs))
 
     if not (function_references := member_type_details.function_references):
         function_references_pairs = [
@@ -2447,7 +2599,7 @@ def generate_function_member_dataset(  # noqa: C901, PLR0912, PLR0915
         function_member_retrieval_chunks.append(
             f"{function_member} documents no references in its docstring."
         )
-        function_member_tuning_pairs.extend(function_references_pairs)
+        function_member_tuning_pairs.extend(allocate_tuning_pairs(function_references_pairs))
     else:
         function_references_pairs = [
             (
@@ -2478,7 +2630,7 @@ def generate_function_member_dataset(  # noqa: C901, PLR0912, PLR0915
         function_member_retrieval_chunks.append(
             f"{function_member} list the following references: {function_references}"
         )
-        function_member_tuning_pairs.extend(function_references_pairs)
+        function_member_tuning_pairs.extend(allocate_tuning_pairs(function_references_pairs))
 
     if not (function_examples := member_type_details.function_examples):
         function_examples_pairs = [
@@ -2510,7 +2662,7 @@ def generate_function_member_dataset(  # noqa: C901, PLR0912, PLR0915
         function_member_retrieval_chunks.append(
             f"Documentation of {function_member} lacks any examples."
         )
-        function_member_tuning_pairs.extend(function_examples_pairs)
+        function_member_tuning_pairs.extend(allocate_tuning_pairs(function_examples_pairs))
     else:
         function_examples_pairs = [
             (
@@ -2547,7 +2699,7 @@ def generate_function_member_dataset(  # noqa: C901, PLR0912, PLR0915
         function_member_retrieval_chunks.append(
             f"Docstring of {function_member} contains following examples: '{function_examples}'."
         )
-        function_member_tuning_pairs.extend(function_examples_pairs)
+        function_member_tuning_pairs.extend(allocate_tuning_pairs(function_examples_pairs))
 
     function_member_dataset = Dataset(
         retrieval_chunks=function_member_retrieval_chunks[:2],
@@ -2559,12 +2711,34 @@ def generate_function_member_dataset(  # noqa: C901, PLR0912, PLR0915
 
 @pydantic.validate_call(validate_return=True)
 def generate_member_dataset(member_details: MemberDetails) -> tuple[Dataset, ...]:
+    """Create a dataset for a member.
+
+    Parameters
+    ----------
+    member_details : MemberDetails
+        all details of the member
+
+    Returns
+    -------
+    tuple[Dataset, ...]
+        all documents for retrieval and tuning pairs for querying member documentation
+
+    Raises
+    ------
+    ValueError
+        if the member type is not supported
+
+    Notes
+    -----
+    * There will be a single return if member type is not enum, class or function.
+    * Otherwise, there will be two returns, one for the member and one for the member type.
+    """
     member_name = member_details.member_name
     member_full_name = member_details.member_qualified_name
     member = f"'{member_name}' object"
 
     member_retrieval_chunks: list[str] = []
-    member_tuning_pairs: list[tuple[str, str]] = []
+    member_tuning_pairs: list[tuple[str, str, SplitName]] = []
 
     module_parent_pairs = [
         (
@@ -2595,7 +2769,7 @@ def generate_member_dataset(member_details: MemberDetails) -> tuple[Dataset, ...
     member_retrieval_chunks.append(
         f"{member} is part of parent module {member_details.member_module}."
     )
-    member_tuning_pairs.extend(module_parent_pairs)
+    member_tuning_pairs.extend(allocate_tuning_pairs(module_parent_pairs))
 
     member_full_name_pairs = [
         (
@@ -2624,7 +2798,7 @@ def generate_member_dataset(member_details: MemberDetails) -> tuple[Dataset, ...
         ),
     ]
     member_retrieval_chunks.append(f"Full name of {member} is '{member_full_name}'.")
-    member_tuning_pairs.extend(member_full_name_pairs)
+    member_tuning_pairs.extend(allocate_tuning_pairs(member_full_name_pairs))
 
     member_hierarchy = enumerate_array_elements(member_details.member_hierarchy)
     member_hierarchy_pairs = [
@@ -2654,7 +2828,7 @@ def generate_member_dataset(member_details: MemberDetails) -> tuple[Dataset, ...
         ),
     ]
     member_retrieval_chunks.append(f"Hierarchy of {member} is as follows: {member_hierarchy}.")
-    member_tuning_pairs.extend(member_hierarchy_pairs)
+    member_tuning_pairs.extend(allocate_tuning_pairs(member_hierarchy_pairs))
 
     if not (member_docstring := member_details.member_docstring):
         member_documentation_pairs = [
@@ -2682,7 +2856,7 @@ def generate_member_dataset(member_details: MemberDetails) -> tuple[Dataset, ...
         member_retrieval_chunks.append(
             f"Unfortunately, {member} currently does not have any documentation."
         )
-        member_tuning_pairs.extend(member_documentation_pairs)
+        member_tuning_pairs.extend(allocate_tuning_pairs(member_documentation_pairs))
     else:
         member_documentation_pairs = [
             (f"What does {member} do?", f"Its documentation is as follows: '{member_docstring}'."),
@@ -2710,7 +2884,7 @@ def generate_member_dataset(member_details: MemberDetails) -> tuple[Dataset, ...
         member_retrieval_chunks.append(
             f"The following is the documentation of {member}: '{member_docstring}'."
         )
-        member_tuning_pairs.extend(member_documentation_pairs)
+        member_tuning_pairs.extend(allocate_tuning_pairs(member_documentation_pairs))
 
     if (member_type_details := member_details.member_type_details) is not None:
         member_type = member_type_details.member_type
@@ -2739,7 +2913,7 @@ def generate_member_dataset(member_details: MemberDetails) -> tuple[Dataset, ...
             ),
         ]
         member_retrieval_chunks.insert(-1, f"'{member_name}' is a Python {member_type.value}.")
-        member_tuning_pairs.extend(member_type_pairs)
+        member_tuning_pairs.extend(allocate_tuning_pairs(member_type_pairs))
 
     if member_type_details is None:
         member_retrieval_chunks.insert(0, f"'{member_name}' is a Python object.")

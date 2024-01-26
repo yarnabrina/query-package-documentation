@@ -1,3 +1,5 @@
+"""Define functionalities for dataset generation."""
+
 from .orchestrate_generation import (
     generate_json_dataset,
     generate_raw_datasets,

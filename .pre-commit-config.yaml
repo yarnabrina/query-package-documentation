@@ -16,9 +16,6 @@ repos:
       - id: detect-private-key
       - id: end-of-file-fixer
       - id: mixed-line-ending
-      - id: name-tests-test
-        args:
-          - --pytest-test-first
       - id: no-commit-to-branch
       - id: pretty-format-json
         args:
@@ -49,14 +46,16 @@ repos:
           - src
         pass_filenames: false
   - repo: https://github.com/psf/black
-    rev: 23.12.1
+    rev: 24.1.0
     hooks:
-      - id: black-jupyter
+      - id: black
+        additional_dependencies:
+          - .[jupyter]
         args:
           - src
         pass_filenames: false
   - repo: https://github.com/pycqa/bandit
-    rev: 1.7.6
+    rev: 1.7.7
     hooks:
       - id: bandit
         args:
@@ -68,24 +67,12 @@ repos:
           - src
         pass_filenames: false
   - repo: https://github.com/pycqa/flake8
-    rev: 6.1.0
+    rev: 7.0.0
     hooks:
       - id: flake8
         args:
           - src
         pass_filenames: false
-  # - repo: https://github.com/pre-commit/mirrors-mypy
-  #   rev: v1.7.1
-  #   hooks:
-  #     - id: mypy
-  #       additional_dependencies:
-  #         - pydantic
-  #       args:
-  #         - --ignore-missing-imports
-  #         - --scripts-are-modules
-  #       pass_filenames: false
-  #       stages:
-  #         - manual
   - repo: https://github.com/PyCQA/pylint
     rev: v3.0.3
     hooks:
@@ -97,15 +84,8 @@ repos:
         pass_filenames: false
         stages:
           - manual
-  # - repo: https://github.com/RobertCraigie/pyright-python
-  #   rev: v1.1.337
-  #   hooks:
-  #     - id: pyright
-  #       pass_filenames: false
-  #       stages:
-  #         - manual
   - repo: https://github.com/astral-sh/ruff-pre-commit
-    rev: v0.1.9
+    rev: v0.1.14
     hooks:
       - id: ruff
         args:
@@ -116,47 +96,38 @@ repos:
     hooks:
       - id: vulture
         pass_filenames: false
-  # - repo: https://github.com/PyCQA/docformatter
-  #   rev: v1.7.5
-  #   hooks:
-  #     - id: docformatter
-  #       additional_dependencies:
-  #         - tomli
-  #       args:
-  #         - --in-place
-  #         - src
-  #       pass_filenames: false
-  # - repo: https://github.com/adamchainz/blacken-docs
-  #   rev: 1.16.0
-  #   hooks:
-  #     - id: blacken-docs
-  #       args:
-  #         - --line-length
-  #         - "87"
-  #         - --target-version
-  #         - py311
-  # - repo: https://github.com/econchick/interrogate
-  #   rev: 1.5.0
-  #   hooks:
-  #     - id: interrogate
-  #       args:
-  #         - src
-  #       pass_filenames: false
-  # - repo: https://github.com/pycqa/pydocstyle
-  #   rev: 6.3.0
-  #   hooks:
-  #     - id: pydocstyle
-  #       additional_dependencies:
-  #         - tomli
-  #       args:
-  #         - src
-  #       pass_filenames: false
+  - repo: https://github.com/PyCQA/docformatter
+    rev: v1.7.5
+    hooks:
+      - id: docformatter
+        additional_dependencies:
+          - .[tomli]
+        args:
+          - --in-place
+          - src
+        pass_filenames: false
+  - repo: https://github.com/adamchainz/blacken-docs
+    rev: 1.16.0
+    hooks:
+      - id: blacken-docs
+        args:
+          - --line-length
+          - "87"
+          - --target-version
+          - py311
+  - repo: https://github.com/econchick/interrogate
+    rev: 1.5.0
+    hooks:
+      - id: interrogate
+        args:
+          - src
+        pass_filenames: false
   - repo: https://github.com/tox-dev/pyproject-fmt
-    rev: 1.5.3
+    rev: 1.7.0
     hooks:
       - id: pyproject-fmt
   - repo: https://github.com/abravalheri/validate-pyproject
-    rev: v0.15
+    rev: v0.16
     hooks:
       - id: validate-pyproject
   - repo: https://github.com/codespell-project/codespell
@@ -164,7 +135,7 @@ repos:
     hooks:
       - id: codespell
         additional_dependencies:
-          - tomli
+          - .[toml]
         args:
           - --write-changes
         stages:

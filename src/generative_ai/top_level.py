@@ -1,3 +1,5 @@
+"""Define functionalities for top level modules."""
+
 import logging
 import pathlib
 import shutil
@@ -23,13 +25,32 @@ LOGGER = logging.getLogger(__name__)
 
 
 @pydantic.validate_call(validate_return=True)
-def create_dataset(
-    package_name: str, dataset_file: pathlib.Path, force: bool = False
-) -> pathlib.Path:
+def create_dataset(package_name: str, dataset_file: pathlib.Path, force: bool) -> pathlib.Path:
+    """Generate JSON dataset for querying a package documentation.
+
+    Parameters
+    ----------
+    package_name : str
+        name of the root package to import with
+    dataset_file : pathlib.Path
+        path to store JSON dataset
+    force : bool, optional
+        override if ``dataset_file`` already exists
+
+    Returns
+    -------
+    pathlib.Path
+        absolute path storing JSON dataset
+
+    Raises
+    ------
+    FileExistsError
+        if ``dataset_file`` already exists and overriding is not allowed
+    """
     if dataset_file.exists() and not force:
         LOGGER.error(f"{dataset_file=} refers to an existing file but {force=}")
 
-        raise FileExistsError("Dataset exists already, skipping.")
+        raise FileExistsError("Dataset exists already, aborting.")
 
     if dataset_file.exists():
         dataset_file.unlink()
@@ -47,10 +68,35 @@ def create_dataset(
 def create_database(
     dataset_file: pathlib.Path, embedding_model: str, database_directory: pathlib.Path, force: bool
 ) -> pathlib.Path:
-    if database_directory.exists() and not force:
-        LOGGER.error(f"{database_directory=} refers to an existing file but {force=}")
+    """Generate embedding database for querying a package documentation.
 
-        raise FileExistsError("Dataset exists already, skipping.")
+    Parameters
+    ----------
+    dataset_file : pathlib.Path
+        path storing JSON dataset
+    embedding_model : str
+        name of Sentence Transformers model from Hugging Face
+    database_directory : pathlib.Path
+        path to directory for storing vector store
+    force : bool
+        override if ``database_directory`` already exists
+
+    Returns
+    -------
+    pathlib.Path
+        absolute path to directory storing vector store
+
+    Raises
+    ------
+    FileExistsError
+        if ``database_directory`` already exists and overriding is not allowed
+    FileNotFoundError
+        if ``dataset_file`` does not exist
+    """
+    if database_directory.exists() and not force:
+        LOGGER.error(f"{database_directory=} refers to an existing directory but {force=}")
+
+        raise FileExistsError("Database exists already, aborting.")
 
     if database_directory.exists():
         shutil.rmtree(database_directory)
@@ -59,7 +105,7 @@ def create_database(
     if not dataset_file.exists():
         LOGGER.error(f"{dataset_file=} refers to a non-existing file")
 
-        raise FileNotFoundError("Dataset file is missing, skipping. Use 'generate-dataset' first.")
+        raise FileNotFoundError("Dataset file is missing, aborting.")
 
     source_documents = load_source_documents(dataset_file)
     embedding_database = create_embedding_database(
@@ -87,12 +133,51 @@ def get_response(  # noqa: PLR0913
     quantised_model_file: str,
     quantised_model_type: str,
 ) -> Response:
+    """Get answer from large language model.
+
+    Parameters
+    ----------
+    question : str
+        query from user
+    embedding_model : str
+        name of Sentence Transformers model from Hugging Face
+    database_directory : pathlib.Path
+        path to load vector store from
+    search_type : RetrievalType
+        kind of retrieval algorithm for searching vector store
+    number_of_documents : int
+        number of documents to retrieve
+    initial_number_of_documents : int
+        initial number of documents to consider
+    diversity_level : float
+        similarity between retrieved documents
+    language_model_type : TransformerType
+        kind of language model
+    standard_pipeline_type : PipelineType
+        kind of Hugging Face pipeline
+    standard_model_name : str
+        name of ``transformers`` compatible Hugging Face model
+    quantised_model_name : str
+        name of ``ctransformers`` compatible Hugging Face model
+    quantised_model_file : str
+        named of quantised model file
+    quantised_model_type : str
+        type of quantised model
+
+    Returns
+    -------
+    Response
+        answer from large language model with additional captured details
+
+    Raises
+    ------
+    FileNotFoundError
+        if ``database_directory`` does not exist
+    """
     if not database_directory.exists():
         LOGGER.error(f"{database_directory=} refers to a non-existing directory")
 
-        raise FileNotFoundError(
-            "Database directory is missing, skipping. Use 'generate-database' first."
-        )
+        raise FileNotFoundError("Database directory is missing, aborting.")
 
     embedding_database = load_embedding_database(embedding_model, database_directory)
     language_model = configure_language_model(
