@@ -439,44 +439,6 @@ class Document(pydantic.BaseModel):
     answer: str
     split: SplitName
 
-    @pydantic.computed_field
-    @functools.cached_property
-    def instruction_with_context(self: "Document") -> str:
-        """Store tuning prompt for the document using context, question and answer.
-
-        Returns
-        -------
-        str
-            tuning prompt for the document using context, question and answer
-        """
-        system_instruction = (
-            "Below is a question that can be answered using the following context. "
-            "Write an answer for the question appropriately without using any additional data."
-        )
-
-        return " ".join(
-            [
-                "<s>",
-                f"[INST] {system_instruction} [/INST]",
-                f"[INST] Context: {self.context} [/INST]",
-                f"[INST] Question: {self.question} [/INST]",
-                f"[INST] Answer: {self.answer} [/INST]",
-                "</s>",
-            ]
-        )
-
-    @pydantic.computed_field
-    @functools.cached_property
-    def instruction_without_context(self: "Document") -> str:
-        """Store tuning prompt for the document using question and answer.
-
-        Returns
-        -------
-        str
-            tuning prompt for the document using question and answer
-        """
-        return f"<s>[INST] {self.question} [/INST] {self.answer} </s>"
-
 
 class Dataset(pydantic.BaseModel):
     """Store details of a dataset.
@@ -526,18 +488,12 @@ class JSONDocument(pydantic.BaseModel):
         answer to the question or instruction based on the ``context``
     split : SplitName
         split allocation of the document
-    instruction_with_context : str
-        tuning prompt for the document using context, question and answer
-    instruction_without_context : str
-        tuning prompt for the document using question and answer
     """
 
     context: str
     question: str
     answer: str
     split: SplitName
-    instruction_with_context: str
-    instruction_without_context: str
 
 
 class JSONDataset(pydantic.BaseModel):
