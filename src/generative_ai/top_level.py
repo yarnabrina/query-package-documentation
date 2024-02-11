@@ -1,7 +1,7 @@
 """Define functionalities for top level modules."""
 
 import logging
-import pathlib
+import pathlib  # noqa: TCH003
 import shutil
 
 import pydantic

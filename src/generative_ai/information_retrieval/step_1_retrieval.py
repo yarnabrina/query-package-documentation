@@ -1,17 +1,19 @@
 """Define functionalities to store document embeddings."""
 
-import pathlib
+import typing
 
-from langchain.docstore.document import Document
 from langchain.text_splitter import RecursiveCharacterTextSplitter
 from langchain.vectorstores.chroma import Chroma
 from langchain_community.document_loaders import JSONLoader
 from langchain_community.embeddings import HuggingFaceEmbeddings
 
-from .utils_retrieval import ValidatedChroma
+if typing.TYPE_CHECKING:
+    import pathlib
+
+    from langchain.docstore.document import Document
 
 
-def load_json_documents(file_path: pathlib.Path) -> list[Document]:
+def load_json_documents(file_path: "pathlib.Path") -> list["Document"]:
     """Load retrieval documents from a JSON file.
 
     Parameters
@@ -30,7 +32,7 @@ def load_json_documents(file_path: pathlib.Path) -> list[Document]:
     return raw_documents
 
 
-def partition_documents(raw_documents: list[Document]) -> list[Document]:
+def partition_documents(raw_documents: list["Document"]) -> list["Document"]:
     """Partition retrieval documents into chunks.
 
     Parameters
@@ -72,9 +74,7 @@ def create_document_embedder(embedding_model: str) -> HuggingFaceEmbeddings:
     return embedder
 
 
-def create_vector_store(
-    embedder: HuggingFaceEmbeddings, directory_path: pathlib.Path
-) -> ValidatedChroma:
+def create_vector_store(embedder: HuggingFaceEmbeddings, directory_path: "pathlib.Path") -> Chroma:
     """Initialise a Chroma vector store.
 
     Parameters

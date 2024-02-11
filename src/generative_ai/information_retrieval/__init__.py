@@ -25,7 +25,6 @@ from .utils_retrieval import (
     RetrievalType,
     StandardModel,
     TransformerType,
-    ValidatedChroma,
 )
 
 __all__ = [
@@ -37,7 +36,6 @@ __all__ = [
     "RetrievalType",
     "StandardModel",
     "TransformerType",
-    "ValidatedChroma",
     "configure_language_model",
     "create_database_retriever",
     "create_document_embedder",

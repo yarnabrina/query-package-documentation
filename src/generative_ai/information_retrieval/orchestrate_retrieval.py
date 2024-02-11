@@ -1,10 +1,8 @@
 """Define functionalities to orchestrate information retrieval."""
 
-import pathlib
+import typing
 
 import pydantic
-from langchain.docstore.document import Document
-from langchain.schema.runnable import RunnableSerializable
 
 from .step_1_retrieval import (
     create_document_embedder,
@@ -20,11 +18,17 @@ from .utils_retrieval import (
     PipelineType,
     RetrievalType,
     TransformerType,
-    ValidatedChroma,
 )
 
+if typing.TYPE_CHECKING:
+    import pathlib
 
-def load_source_documents(file_path: pathlib.Path) -> list[Document]:
+    from langchain.docstore.document import Document
+    from langchain.schema.runnable import RunnableSerializable
+    from langchain.vectorstores.chroma import Chroma
+
+
+def load_source_documents(file_path: "pathlib.Path") -> list["Document"]:
     """Load and partition source documents.
 
     Parameters
@@ -44,8 +48,8 @@ def load_source_documents(file_path: pathlib.Path) -> list[Document]:
 
 
 def create_embedding_database(
-    embedding_model: str, directory_path: pathlib.Path, source_documents: list[Document]
-) -> ValidatedChroma:
+    embedding_model: str, directory_path: "pathlib.Path", source_documents: list["Document"]
+) -> "Chroma":
     """Prepare an embedding database.
 
     Parameters
@@ -70,7 +74,7 @@ def create_embedding_database(
     return vector_store
 
 
-def store_embedding_database(vector_store: ValidatedChroma) -> None:
+def store_embedding_database(vector_store: "Chroma") -> None:
     """Dump vector store to disk into configured directory.
 
     Parameters
@@ -81,7 +85,7 @@ def store_embedding_database(vector_store: ValidatedChroma) -> None:
     vector_store.persist()
 
 
-def load_embedding_database(embedding_model: str, directory_path: pathlib.Path) -> ValidatedChroma:
+def load_embedding_database(embedding_model: str, directory_path: "pathlib.Path") -> "Chroma":
     """Load vector store from disk from configured directory.
 
     Parameters
@@ -168,13 +172,13 @@ def configure_language_model(  # noqa: PLR0913
 
 
 def prepare_question_answer_chain(  # noqa: PLR0913
-    embedding_database: ValidatedChroma,
+    embedding_database: "Chroma",
     search_type: RetrievalType,
     number_of_documents: int,
     initial_number_of_documents: int,
     diversity_level: float,
     language_model: LanguageModel,
-) -> RunnableSerializable:
+) -> "RunnableSerializable":
     """Prepare a question answering pipeline.
 
     Parameters
@@ -212,7 +216,7 @@ def prepare_question_answer_chain(  # noqa: PLR0913
 
 
 def run_question_answer_chain(
-    question_answer_chain: RunnableSerializable, question: str
+    question_answer_chain: "RunnableSerializable", question: str
 ) -> tuple[dict, CaptureDetailsCallback]:
     """Run question answering pipeline for user input.
 

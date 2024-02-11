@@ -1,23 +1,28 @@
 """Define functionalities to fetch and use relevant information from database."""
 
+import typing
+
 import transformers
 from langchain.chains import RetrievalQA
-from langchain.chains.retrieval_qa.base import BaseRetrievalQA
 from langchain.llms.ctransformers import CTransformers
 from langchain.llms.huggingface_pipeline import HuggingFacePipeline
 from langchain.prompts import PromptTemplate
-from langchain.schema.vectorstore import VectorStoreRetriever
 
-from .utils_retrieval import LanguageModel, RetrievalType, TransformerType, ValidatedChroma
+from .utils_retrieval import LanguageModel, RetrievalType, TransformerType
+
+if typing.TYPE_CHECKING:
+    from langchain.chains.retrieval_qa.base import BaseRetrievalQA
+    from langchain.schema.vectorstore import VectorStoreRetriever
+    from langchain.vectorstores.chroma import Chroma
 
 
 def create_database_retriever(
-    embedding_database: ValidatedChroma,
+    embedding_database: "Chroma",
     search_type: RetrievalType,
     number_of_documents: int,
     initial_number_of_documents: int,
     diversity_level: float,
-) -> VectorStoreRetriever:
+) -> "VectorStoreRetriever":
     """Prepare a vector store retriever for the retrieval database.
 
     Parameters
@@ -134,8 +139,8 @@ def create_llm(language_model: LanguageModel) -> CTransformers | HuggingFacePipe
 
 
 def generate_retrieval_chain(
-    database_retriever: VectorStoreRetriever, llm: CTransformers | HuggingFacePipeline
-) -> BaseRetrievalQA:
+    database_retriever: "VectorStoreRetriever", llm: CTransformers | HuggingFacePipeline
+) -> "BaseRetrievalQA":
     """Prepare a retrieval chain for question answering.
 
     Parameters

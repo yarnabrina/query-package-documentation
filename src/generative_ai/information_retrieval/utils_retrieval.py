@@ -4,7 +4,6 @@ import enum
 import typing
 
 import pydantic
-from langchain.vectorstores.chroma import Chroma
 
 
 class RetrievalType(str, enum.Enum):
@@ -72,8 +71,6 @@ LanguageModel = typing.Annotated[
 ]
 LanguageModelAdapter = pydantic.TypeAdapter(LanguageModel)
 
-ValidatedChroma = pydantic.InstanceOf[Chroma]
-
 
 __all__ = [
     "LanguageModel",
@@ -83,5 +80,4 @@ __all__ = [
     "QuantisedModel",
     "RetrievalType",
     "StandardModel",
-    "ValidatedChroma",
 ]

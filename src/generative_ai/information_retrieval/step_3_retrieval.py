@@ -2,10 +2,13 @@
 
 import time
 import typing
-import uuid
 
 from langchain.callbacks.base import BaseCallbackHandler
-from langchain_core.outputs import LLMResult
+
+if typing.TYPE_CHECKING:
+    import uuid
+
+    from langchain_core.outputs import LLMResult
 
 
 class CaptureDetailsCallback(BaseCallbackHandler):
@@ -19,7 +22,7 @@ class CaptureDetailsCallback(BaseCallbackHandler):
         time taken (in seconds) for large language model to generate response
     """
 
-    def __init__(self: "CaptureDetailsCallback") -> None:  # numpydoc ignore=GL08
+    def __init__(self: "CaptureDetailsCallback") -> None:
         super().__init__()
 
         self.effective_prompt: str | None = None
@@ -30,11 +33,11 @@ class CaptureDetailsCallback(BaseCallbackHandler):
         serialized: dict,
         prompts: list[str],
         *,
-        run_id: uuid.UUID,
-        parent_run_id: uuid.UUID | None = None,
+        run_id: "uuid.UUID",
+        parent_run_id: "uuid.UUID | None" = None,
         tags: list[str] | None = None,
         metadata: dict | None = None,
-        **kwargs: typing.Any,
+        **kwargs: typing.Any,  # noqa: ANN401
     ) -> None:
         """Run when large language model starts generating response.
 
@@ -58,11 +61,11 @@ class CaptureDetailsCallback(BaseCallbackHandler):
 
     def on_llm_end(  # numpydoc ignore=PR01
         self: "CaptureDetailsCallback",
-        response: LLMResult,
+        response: "LLMResult",
         *,
-        run_id: uuid.UUID,
-        parent_run_id: uuid.UUID | None = None,
-        **kwargs: typing.Any,
+        run_id: "uuid.UUID",
+        parent_run_id: "uuid.UUID | None" = None,
+        **kwargs: typing.Any,  # noqa: ANN401
     ) -> None:
         """Run when large language model finishes generating response.
 

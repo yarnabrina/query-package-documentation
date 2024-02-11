@@ -27,6 +27,9 @@ DEFAULT_SPLIT_PROPORTIONS = SplitProportions(
     train_proportion=0.6, validation_proportion=0.2, test_proportion=0.2
 )
 
+EMPTY_PARAMETER = inspect.Parameter.empty
+EMPTY_SIGNATURE = inspect.Signature.empty
+
 
 @pydantic.validate_call(validate_return=True)
 def allocate_tuning_pairs(
@@ -1212,7 +1215,7 @@ def generate_class_member_dataset(  # noqa: C901, PLR0912, PLR0915
         parameter_name = class_parameter.parameter_name
         parameter = f"'{parameter_name}' argument in {class_member}"
 
-        if (parameter_default := class_parameter.parameter_default) is inspect._empty:
+        if (parameter_default := class_parameter.parameter_default) is EMPTY_PARAMETER:
             class_parameter_defaults_pairs = [
                 (
                     f"Tell default value of {parameter}.",
@@ -1273,7 +1276,7 @@ def generate_class_member_dataset(  # noqa: C901, PLR0912, PLR0915
             )
             class_member_tuning_pairs.extend(allocate_tuning_pairs(class_parameter_defaults_pairs))
 
-        if (parameter_annotation := class_parameter.parameter_annotation) is inspect._empty:
+        if (parameter_annotation := class_parameter.parameter_annotation) is EMPTY_PARAMETER:
             class_parameter_types_pairs = [
                 (
                     f"Name type hint for {parameter}.",
@@ -1951,7 +1954,7 @@ def generate_function_member_dataset(  # noqa: C901, PLR0912, PLR0915
         parameter_name = function_parameter.parameter_name
         parameter = f"'{parameter_name}' argument in {function_member}"
 
-        if (parameter_default := function_parameter.parameter_default) is inspect._empty:
+        if (parameter_default := function_parameter.parameter_default) is EMPTY_PARAMETER:
             function_parameter_defaults_pairs = [
                 (f"Default value of {parameter}?", f"{parameter} does not have a default value."),
                 (
@@ -2013,7 +2016,7 @@ def generate_function_member_dataset(  # noqa: C901, PLR0912, PLR0915
                 allocate_tuning_pairs(function_parameter_defaults_pairs)
             )
 
-        if (parameter_annotation := function_parameter.parameter_annotation) is inspect._empty:
+        if (parameter_annotation := function_parameter.parameter_annotation) is EMPTY_PARAMETER:
             function_parameter_types_pairs = [
                 (
                     f"What is type annotation of {parameter}?",
@@ -2156,7 +2159,7 @@ def generate_function_member_dataset(  # noqa: C901, PLR0912, PLR0915
 
     if (
         returns_annotation := member_type_details.function_returns.returns_annotation
-    ) is inspect._empty:
+    ) is EMPTY_SIGNATURE:
         function_return_type_pairs = [
             (
                 f"What is the return type annotation of {function_member}?",

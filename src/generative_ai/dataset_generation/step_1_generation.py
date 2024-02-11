@@ -6,7 +6,7 @@ import importlib.util
 import inspect
 import logging
 import pkgutil
-import types
+import types  # noqa: TCH003
 import typing
 
 import pydantic
