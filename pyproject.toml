@@ -44,13 +44,13 @@ dynamic=[
 dependencies = [
   "chromadb<0.5,>=0.4.15",
   "ctransformers<0.3,>=0.2.27",
-  "gradio<4.20,>=4.16",
+  "gradio<4.20,>=4.19.2",
   "jq<1.7,>=1.6",
   "langchain<0.2,>=0.1.1",
   "numpydoc<1.7,>=1.6",
   "pydantic<2.7,>=2.4.2",
-  "sentence-transformers<2.4,>=2.2.2",
-  "transformers<4.38,>=4.36",
+  "sentence-transformers<2.5,>=2.2.2",
+  "transformers<4.39,>=4.36",
   "typer<0.10,>=0.9",
 ]
 [project.optional-dependencies]
