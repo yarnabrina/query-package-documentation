@@ -112,6 +112,7 @@ def create_llm(language_model: LanguageModel) -> CTransformers | HuggingFacePipe
                 use_fast=True,
                 padding="max_length",
                 truncation=True,
+                padding_side="left",
             )
             tokeniser.pad_token = tokeniser.eos_token
 
