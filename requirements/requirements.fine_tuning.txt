@@ -5,5 +5,4 @@ evaluate
 peft
 safetensors
 torch
-transformers
 trl
