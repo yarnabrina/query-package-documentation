@@ -2,7 +2,9 @@ accelerate
 bitsandbytes
 datasets
 evaluate
+nltk
 peft
+rouge-score
 safetensors
 torch
 trl

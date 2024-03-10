@@ -1,6 +1,6 @@
 chromadb<0.5,>=0.4.15
 ctransformers<0.3,>=0.2.27
-gradio<4.20,>=4.19.2
+gradio<4.22,>=4.19.2
 jq<1.7,>=1.6
 langchain<0.1.8,>=0.1.1
 numpydoc<1.7,>=1.6
