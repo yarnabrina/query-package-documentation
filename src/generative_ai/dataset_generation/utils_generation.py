@@ -447,32 +447,12 @@ class Dataset(pydantic.BaseModel):
     ----------
     retrieval_chunks : list[str]
         chunks of text to be used for retrieval
-    tuning_pairs : list[tuple[str, str, SplitName]]
+    tuning_triplets : list[tuple[str, str, SplitName]]
         pairs of question and answer to be used for tuning and their split allocation
     """
 
     retrieval_chunks: list[str]
-    tuning_pairs: list[tuple[str, str, SplitName]]
-
-    @pydantic.computed_field
-    @functools.cached_property
-    def tuning_documents(self: "Dataset") -> list[Document]:
-        """Store tuning documents using concatenated retrieval sources, questions and answers.
-
-        Returns
-        -------
-        list[Document]
-            tuning documents using concatenated retrieval sources, questions and answers
-        """
-        return [
-            Document(
-                context=" ".join(self.retrieval_chunks),
-                question=question,
-                answer=answer,
-                split=split,
-            )
-            for question, answer, split in self.tuning_pairs
-        ]
+    tuning_documents: list[Document]
 
 
 class JSONDocument(pydantic.BaseModel):
