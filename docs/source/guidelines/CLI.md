@@ -35,10 +35,10 @@ Database generation complete: '/full/path/to/working/directory/vector_database'.
 $ docs-cli answer-query "How many modules are there in information retrieval sub-package?" --embedding-model "all-mpnet-base-v2" --database-directory "vector_database" --search-type "similarity" --number-of-documents 5 --language-model-type "standard_transformers" --standard-pipeline-type "text2text-generation" --standard-model-name "google/flan-t5-large"
 Query: How many modules are there in information retrieval sub-package?
 Answer: 5
-Duration: 2.28 seconds
+Duration: 1.69 seconds
 Source 1: 'information_retrieval' package has 5 many modules.
 Source 2: Modules of 'information_retrieval' package are as follows: 1. orchestrate_retrieval 2. step_1_retrieval 3. step_2_retrieval 4. step_3_retrieval 5. utils_retrieval.
-Source 3: 'information_retrieval' package has 23 many public exports.
+Source 3: 'information_retrieval' package has 22 many public exports.
 Source 4: Hierarchy of 'information_retrieval' package is as follows: 1. generative_ai 2. information_retrieval.
 Source 5: Hierarchy of 'utils_retrieval' module is as follows: 1. generative_ai 2. information_retrieval 3. utils_retrieval.
 ```
@@ -50,7 +50,7 @@ $ docs-cli answer-query "What are different types of retrieval supported by this
 Query: What are different types of retrieval supported by this package?
 Answer: MMR and Similarity.
 
-Duration: 20.75 seconds
+Duration: 22.97 seconds
 Source 1: The following is the documentation of 'RetrievalType' object: 'Define supported retrieval types.'.
 Source 2: 'information_retrieval' package has 5 many modules.
 Source 3: Names of different members of 'RetrievalType' enum are as follows: 1. MMR 2. SIMILARITY.
@@ -64,7 +64,7 @@ Source 5: The following is the documentation of 'information_retrieval' package:
 $ docs-cli answer-query "List public exports of dataset generation package." --embedding-model "all-mpnet-base-v2" --database-directory "vector_database" --search-type "mmr" --number-of-documents 5 --initial-number-of-documents 10 --language-model-type "quantised_ctransformers" --quantised-model-name "TheBloke/Mistral-7B-v0.1-GGUF" --quantised-model-file "mistral-7b-v0.1.Q4_K_M.gguf" --quantised-model-type "mistral"
 Query: List public exports of dataset generation package.
 Answer: The following is the list of public exports of 'dataset_generation' package: 1. JSONDataset 2. JSONDocument 3. generate_json_dataset 4. generate_member_dataset 5. generate_module_dataset 6. generate_package_dataset 7. generate_raw_datasets 8. get_all_member_details 9. get_all_module_contents 10. get_all_package_contents 11. load_json_dataset 12. store_json_dataset.
-Duration: 58.37 seconds
+Duration: 57.91 seconds
 Source 1: 'dataset_generation' package has 12 many public exports.
 Source 2: Documentation of 'generate_package_dataset' function lacks any examples.
 Source 3: The following is the documentation of 'generate_raw_datasets' object: 'Generate all retrieval and tuning documents for exploring documentation of a package.
